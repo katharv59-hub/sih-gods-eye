@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# YOLO model weights (auto-downloaded)
+*.pt
+!requirements*.txt
+
+# Test artifacts (screenshots, samples)
+tests/data/screenshots/
+tests/data/detection_samples/
+tests/data/tracking_samples/
+tests/data/debug_bbox/
+tests/data/synthetic_30fps_5s.mp4
+
+# Pytest / mypy cache
+.pytest_cache/
+.mypy_cache/
+
+# Gemini
+.gemini/
