@@ -125,3 +125,69 @@ class TestByteTrackTracker:
         tracker.reset()
         assert tracker.total_track_count == 0
         assert tracker.active_track_count == 0
+
+    def test_velocity_first_frame_zero(self) -> None:
+        """First frame of a new track must have velocity (0.0, 0.0)."""
+        tracker = self._make_tracker()
+        dets = [_make_detection(100, 100, 200, 300)]
+        tracks = tracker.update(dets, frame_id=1, camera_id="cam-01")
+        active = [t for t in tracks if t.state == TrackState.ACTIVE]
+        assert len(active) >= 1
+        assert active[0].velocity == (0.0, 0.0)
+
+    def test_velocity_moving_track(self) -> None:
+        """A track moving rightward should have positive dx."""
+        tracker = self._make_tracker()
+        # Frame 1: person at x=[100,200]
+        dets1 = [_make_detection(100, 100, 200, 300, frame_id=1)]
+        tracker.update(dets1, frame_id=1, camera_id="cam-01")
+
+        # Frame 2: person shifted right by 20px
+        dets2 = [_make_detection(120, 100, 220, 300, frame_id=2)]
+        tracks = tracker.update(dets2, frame_id=2, camera_id="cam-01")
+        active = [t for t in tracks if t.state == TrackState.ACTIVE]
+        assert len(active) >= 1
+        # Center moved from (150, 200) to (170, 200) => dx=20, dy=0
+        assert active[0].velocity[0] > 0  # positive dx
+        assert active[0].velocity[1] == 0.0  # no vertical movement
+
+    def test_velocity_lost_track_preserves(self) -> None:
+        """Lost tracks should preserve their last known velocity."""
+        tracker = self._make_tracker()
+
+        # Several frames of rightward motion
+        for fid in range(1, 4):
+            offset = (fid - 1) * 20
+            dets = [_make_detection(
+                100 + offset, 100, 200 + offset, 300, frame_id=fid
+            )]
+            tracker.update(dets, frame_id=fid, camera_id="cam-01")
+
+        # Next frame: no detection — track becomes LOST
+        tracks = tracker.update([], frame_id=4, camera_id="cam-01")
+        lost = [t for t in tracks if t.state == TrackState.LOST]
+        assert len(lost) >= 1
+        # Lost track preserves last velocity (non-zero from rightward motion)
+        assert lost[0].velocity[0] > 0
+
+    def test_supervision_bytetrack_regression(self) -> None:
+        """Regression: confirm tracker output schema includes all §4 fields."""
+        tracker = self._make_tracker()
+        dets = [_make_detection(100, 100, 200, 300)]
+        tracks = tracker.update(dets, frame_id=1, camera_id="cam-01")
+        active = [t for t in tracks if t.state == TrackState.ACTIVE]
+        assert len(active) >= 1
+        t = active[0]
+        # All §4 Track fields present
+        assert hasattr(t, "track_id")
+        assert hasattr(t, "camera_id")
+        assert hasattr(t, "state")
+        assert hasattr(t, "bbox")
+        assert hasattr(t, "velocity")
+        assert hasattr(t, "first_frame_id")
+        assert hasattr(t, "last_frame_id")
+        assert hasattr(t, "lost_frame_count")
+        assert hasattr(t, "detection_history")
+        # Type checks
+        assert isinstance(t.velocity, tuple)
+        assert len(t.velocity) == 2

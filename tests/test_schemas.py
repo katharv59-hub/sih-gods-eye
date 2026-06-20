@@ -61,6 +61,7 @@ class TestTrack:
             camera_id="cam-01",
             state=TrackState.ACTIVE,
             bbox=BoundingBox(0, 0, 50, 50),
+            velocity=(2.5, -1.3),
             first_frame_id=0,
             last_frame_id=10,
             lost_frame_count=0,
@@ -68,6 +69,21 @@ class TestTrack:
         )
         assert track.state == TrackState.ACTIVE
         assert len(track.detection_history) == 2
+        assert track.velocity == (2.5, -1.3)
+
+    def test_velocity_zero_default(self) -> None:
+        """First frame of a track should have zero velocity."""
+        track = Track(
+            track_id="t-2",
+            camera_id="cam-01",
+            state=TrackState.ACTIVE,
+            bbox=BoundingBox(0, 0, 50, 50),
+            velocity=(0.0, 0.0),
+            first_frame_id=0,
+            last_frame_id=0,
+            lost_frame_count=0,
+        )
+        assert track.velocity == (0.0, 0.0)
 
 
 class TestIdentity:

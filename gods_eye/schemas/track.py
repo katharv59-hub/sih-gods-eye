@@ -25,6 +25,7 @@ class Track:
         camera_id: Source camera identifier.
         state: Current lifecycle state.
         bbox: Most recent bounding box.
+        velocity: (dx, dy) pixels/frame from consecutive bbox centers.
         first_frame_id: Frame where this track was first seen.
         last_frame_id: Frame where this track was last seen.
         lost_frame_count: Consecutive frames without a detection match.
@@ -35,6 +36,7 @@ class Track:
     camera_id: str
     state: TrackState
     bbox: BoundingBox
+    velocity: tuple[float, float]  # (dx, dy) pixels/frame — v3 §4
     first_frame_id: int
     last_frame_id: int
     lost_frame_count: int

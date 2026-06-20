@@ -26,6 +26,8 @@ class _TrackInfo:
     first_frame_id: int
     last_frame_id: int
     last_bbox: BoundingBox
+    prev_center: tuple[float, float] = (0.0, 0.0)  # For velocity computation
+    velocity: tuple[float, float] = (0.0, 0.0)      # (dx, dy) pixels/frame
     lost_frame_count: int = 0
     detection_history: list[str] = field(default_factory=list)
 
@@ -111,13 +113,23 @@ class ByteTrackTracker(Tracker):
 
                 # Get or create track info
                 if tid not in self._track_info:
+                    center = bbox.center
                     self._track_info[tid] = _TrackInfo(
                         first_frame_id=frame_id,
                         last_frame_id=frame_id,
                         last_bbox=bbox,
+                        prev_center=center,
+                        velocity=(0.0, 0.0),  # First frame: zero velocity
                     )
 
                 info = self._track_info[tid]
+                # Compute velocity from consecutive bbox centers
+                current_center = bbox.center
+                info.velocity = (
+                    current_center[0] - info.prev_center[0],
+                    current_center[1] - info.prev_center[1],
+                )
+                info.prev_center = current_center
                 info.last_frame_id = frame_id
                 info.last_bbox = bbox
                 info.lost_frame_count = 0
@@ -139,6 +151,7 @@ class ByteTrackTracker(Tracker):
                         camera_id=camera_id,
                         state=TrackState.ACTIVE,
                         bbox=bbox,
+                        velocity=info.velocity,
                         first_frame_id=info.first_frame_id,
                         last_frame_id=frame_id,
                         lost_frame_count=0,
@@ -160,6 +173,7 @@ class ByteTrackTracker(Tracker):
                             camera_id=camera_id,
                             state=TrackState.LOST,
                             bbox=info.last_bbox,
+                            velocity=info.velocity,
                             first_frame_id=info.first_frame_id,
                             last_frame_id=info.last_frame_id,
                             lost_frame_count=info.lost_frame_count,

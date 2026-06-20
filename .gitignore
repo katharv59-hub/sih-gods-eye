@@ -38,3 +38,9 @@ tests/data/synthetic_30fps_5s.mp4
 
 # Gemini
 .gemini/
+
+# Benchmark results (machine-specific)
+benchmarks/results/
+
+# MOT17 dataset (5+ GB, not tracked)
+tests/data/MOT17/

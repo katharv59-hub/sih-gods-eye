@@ -55,11 +55,13 @@ class YOLODetector(Detector):
         self._model.to(self._device)
 
         self._confidence_threshold = settings.detection_confidence_threshold
+        self._imgsz = settings.detection_imgsz
         self._target_classes: tuple[str, ...] = settings.detection_target_classes
 
         self._log.info(
             "detector_ready",
             confidence_threshold=self._confidence_threshold,
+            imgsz=self._imgsz,
             target_classes=list(self._target_classes),
         )
 
@@ -91,6 +93,7 @@ class YOLODetector(Detector):
             device=self._device,
             half=self._half,
             conf=self._confidence_threshold,
+            imgsz=self._imgsz,
             classes=[_PERSON_CLASS_ID],
         )
 

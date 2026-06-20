@@ -49,6 +49,7 @@ class Settings:
     # ── Detection ──────────────────────────────────────────────────────
     detection_model: str = "yolov8n.pt"
     detection_confidence_threshold: float = 0.25
+    detection_imgsz: int = 640
     detection_target_classes: tuple[str, ...] = ("person",)
 
     # ── Tracking ───────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ class Settings:
             detection_confidence_threshold=_env_float(
                 "GODS_EYE_DETECTION_CONFIDENCE", 0.25
             ),
+            detection_imgsz=_env_int("GODS_EYE_DETECTION_IMGSZ", 640),
             detection_target_classes=_env_tuple_str(
                 "GODS_EYE_DETECTION_TARGET_CLASSES", ("person",)
             ),
