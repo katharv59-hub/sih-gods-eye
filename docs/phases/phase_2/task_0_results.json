@@ -1,0 +1,93 @@
+{
+  "environment": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "pytorch": "2.5.1+cu121",
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "gpu_name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_vram_mb": 6140
+  },
+  "torchreid_import": {
+    "status": "PASS",
+    "version": "0.2.5"
+  },
+  "model_load": {
+    "status": "PASS",
+    "model_name": "osnet_x1_0",
+    "load_time_s": 8.236,
+    "total_params": 2170021,
+    "model_size_mb": 8.28
+  },
+  "cuda_execution": {
+    "status": "PASS",
+    "device": "cuda",
+    "vram_allocated_mb": 16.95,
+    "vram_reserved_mb": 36.0
+  },
+  "inference_timing": {
+    "status": "PASS",
+    "embedding_dim": 512,
+    "input_size": "3x256x128",
+    "timings": {
+      "batch_1": {
+        "batch_size": 1,
+        "mean_ms": 22.72,
+        "std_ms": 4.41,
+        "min_ms": 17.85,
+        "max_ms": 34.46,
+        "p50_ms": 21.02,
+        "p95_ms": 29.64,
+        "p99_ms": 33.5,
+        "per_image_ms": 22.72
+      },
+      "batch_5": {
+        "batch_size": 5,
+        "mean_ms": 18.11,
+        "std_ms": 1.71,
+        "min_ms": 16.39,
+        "max_ms": 23.82,
+        "p50_ms": 17.84,
+        "p95_ms": 20.41,
+        "p99_ms": 23.14,
+        "per_image_ms": 3.62
+      },
+      "batch_10": {
+        "batch_size": 10,
+        "mean_ms": 17.62,
+        "std_ms": 1.5,
+        "min_ms": 16.05,
+        "max_ms": 22.48,
+        "p50_ms": 17.51,
+        "p95_ms": 19.75,
+        "p99_ms": 21.93,
+        "per_image_ms": 1.76
+      },
+      "batch_20": {
+        "batch_size": 20,
+        "mean_ms": 29.26,
+        "std_ms": 5.8,
+        "min_ms": 24.0,
+        "max_ms": 42.0,
+        "p50_ms": 26.29,
+        "p95_ms": 38.79,
+        "p99_ms": 41.36,
+        "per_image_ms": 1.46
+      },
+      "batch_30": {
+        "batch_size": 30,
+        "mean_ms": 44.0,
+        "std_ms": 3.6,
+        "min_ms": 40.82,
+        "max_ms": 51.52,
+        "p50_ms": 42.31,
+        "p95_ms": 51.06,
+        "p99_ms": 51.43,
+        "per_image_ms": 1.47
+      }
+    },
+    "fp16_batch10_mean_ms": 25.97,
+    "fp16_batch10_per_image_ms": 2.6
+  },
+  "issues": [],
+  "verdict": "PASS"
+}

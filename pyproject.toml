@@ -34,7 +34,7 @@ strict = true
 python_version = "3.11"
 
 [[tool.mypy.overrides]]
-module = ["cv2", "ultralytics", "supervision"]
+module = ["cv2", "ultralytics", "supervision", "torchreid"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

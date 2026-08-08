@@ -7,11 +7,30 @@ Schema changes require an ADR entry.
 IMPORTANT: This package must NEVER import from other gods_eye modules.
 """
 
+from gods_eye.schemas.camera import CameraNode, Zone
 from gods_eye.schemas.detection import BoundingBox, Detection
-from gods_eye.schemas.track import Track, TrackState
-from gods_eye.schemas.identity import Identity, IdentityStatus
+from gods_eye.schemas.environment import (
+    BackgroundModel,
+    LightingCondition,
+    OccupancyBaseline,
+    SceneState,
+    SystemMode,
+)
 from gods_eye.schemas.event import Event, EventType
-from gods_eye.schemas.camera import CameraNode
+from gods_eye.schemas.identity import Identity, IdentityStatus
+from gods_eye.schemas.observation import (
+    ObservationPriority,
+    TemporalObservation,
+    TemporalObservationType,
+)
+from gods_eye.schemas.timeline import (
+    CameraTimeline,
+    IdentityTimeline,
+    ReplayFrame,
+    VisitSegment,
+    ZoneTimeline,
+)
+from gods_eye.schemas.track import Track, TrackState
 
 __all__ = [
     "BoundingBox",
@@ -23,4 +42,18 @@ __all__ = [
     "Event",
     "EventType",
     "CameraNode",
+    "Zone",
+    "BackgroundModel",
+    "LightingCondition",
+    "OccupancyBaseline",
+    "SceneState",
+    "SystemMode",
+    "ObservationPriority",
+    "TemporalObservation",
+    "TemporalObservationType",
+    "VisitSegment",
+    "IdentityTimeline",
+    "CameraTimeline",
+    "ZoneTimeline",
+    "ReplayFrame",
 ]

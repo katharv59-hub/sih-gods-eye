@@ -29,6 +29,7 @@ from gods_eye.ingestion.frame_packet import FramePacket
 from gods_eye.ingestion.source import FrameSource, VideoFileSource, WebcamSource
 from gods_eye.observability.logger import configure_logging
 from gods_eye.pipeline import Pipeline, TrackingResult
+from gods_eye.reid.identity_mapper import IdentityResult
 from gods_eye.schemas.track import TrackState
 from gods_eye.tracking.bytetrack_tracker import ByteTrackTracker
 
@@ -128,6 +129,7 @@ class OverlayRenderer:
             f"Q frame: {queue_depths.get('frame', 0)}",
             f"Q det:   {queue_depths.get('det', 0)}",
             f"Q track: {queue_depths.get('track', 0)}",
+            f"Q ident: {queue_depths.get('identity', 0)}",
         ]
 
         panel_h = 20 + len(panel_lines) * 22
@@ -198,10 +200,10 @@ def main() -> None:
     renderer = OverlayRenderer()
 
     # Shared state for output callback
-    latest_result: list[TrackingResult | None] = [None]
+    latest_result: list[IdentityResult | None] = [None]
     result_lock = threading.Lock()
 
-    def on_result(r: TrackingResult) -> None:
+    def on_result(r: IdentityResult) -> None:
         with result_lock:
             latest_result[0] = r
 
@@ -240,11 +242,13 @@ def main() -> None:
                 "frame": pipeline._frame_q.qsize,
                 "det": pipeline._det_q.qsize,
                 "track": pipeline._track_q.qsize,
+                "identity": pipeline._identity_q.qsize,
             }
             drops = pipeline._det_q.drop_count + pipeline._track_q.drop_count
 
+            tracking = result.tracking
             display = renderer.render(
-                result.packet.frame, result, stats, drops, queue_depths
+                tracking.packet.frame, tracking, stats, drops, queue_depths
             )
             cv2.imshow(window_name, display)
 

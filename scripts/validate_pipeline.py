@@ -7,8 +7,14 @@ Reports: E2E FPS, latencies, queue stats, drops.
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import time
+from pathlib import Path
+
+# Add project root to path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 import cv2
 
@@ -30,10 +36,10 @@ def run_pipeline_test(source_name: str, pipeline: Pipeline, duration: float) -> 
 
     original_cb = pipeline._output._callback
 
-    def instrumented_cb(r: TrackingResult) -> None:
+    def instrumented_cb(r: IdentityResult) -> None:
         with lock:
             results.append(r)
-            lat = (time.time_ns() - r.packet.timestamp_ns) / 1_000_000
+            lat = (time.time_ns() - r.tracking.packet.timestamp_ns) / 1_000_000
             latencies.append(lat)
 
     pipeline._output._callback = instrumented_cb
@@ -69,7 +75,7 @@ def run_pipeline_test(source_name: str, pipeline: Pipeline, duration: float) -> 
     with lock:
         for r in results:
             active_track_counts.append(
-                sum(1 for t in r.tracks if t.state == TrackState.ACTIVE)
+                sum(1 for t in r.tracking.tracks if t.state == TrackState.ACTIVE)
             )
 
     avg_tracks = (

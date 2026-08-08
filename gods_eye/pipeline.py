@@ -1,7 +1,8 @@
 """End-to-end pipeline — §8 Concurrency Model.
 
 CaptureThread → [FrameQueue] → DetectionWorker → [DetectionQueue] →
-TrackingWorker → [TrackQueue] → OutputWorker
+TrackingWorker → [TrackQueue] → IdentityWorker → [IdentityQueue] →
+OutputWorker
 
 Rules (§8):
 - Every queue: one producer, one consumer
@@ -15,7 +16,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 import numpy as np
 
@@ -30,6 +31,9 @@ from gods_eye.observability.metrics import MetricsRegistry
 from gods_eye.schemas.detection import Detection
 from gods_eye.schemas.track import Track
 from gods_eye.tracking.tracker import Tracker
+
+if TYPE_CHECKING:
+    from gods_eye.reid.identity_mapper import IdentityMapper, IdentityResult
 
 # ─── Pipeline Data Types ─────────────────────────────────────────────────────
 
@@ -146,6 +150,7 @@ class DetectionWorker(threading.Thread):
         input_queue: FrameQueue,
         output_queue: PipelineQueue[DetectionResult],
         *,
+        secondary_output_queue: PipelineQueue[DetectionResult] | None = None,
         metrics: MetricsRegistry | None = None,
     ) -> None:
         super().__init__(daemon=True, name=f"detection-{camera_id}")
@@ -153,6 +158,7 @@ class DetectionWorker(threading.Thread):
         self._detector = detector
         self._input = input_queue
         self._output = output_queue
+        self._secondary_output = secondary_output_queue
         self._metrics = metrics
         self._log = get_logger("detection.worker", camera_id)
         self._processed = 0
@@ -182,7 +188,11 @@ class DetectionWorker(threading.Thread):
                     subsystem="detection", camera_id=self._camera_id
                 ).observe(latency_ms)
 
-            self._output.put(DetectionResult(packet=packet, detections=dets))
+            det_result = DetectionResult(packet=packet, detections=dets)
+            self._output.put(det_result)
+            if self._secondary_output is not None:
+                self._secondary_output.put(det_result)
+
             self._processed += 1
             fps_count += 1
 
@@ -195,6 +205,8 @@ class DetectionWorker(threading.Thread):
                 fps_count = 0
 
         self._output.close()
+        if self._secondary_output is not None:
+            self._secondary_output.close()
         self._log.info("detection_worker_stopped", processed=self._processed)
 
     @property
@@ -278,14 +290,93 @@ class TrackingWorker(threading.Thread):
         return self._processed
 
 
-class OutputWorker(threading.Thread):
-    """Consumes TrackingResults and delivers them via callback."""
+class IdentityWorker(threading.Thread):
+    """Consumes TrackingResults, resolves identities, produces IdentityResults.
+
+    Inserted between TrackingWorker and OutputWorker.  When no
+    ``IdentityMapper`` is provided, passes TrackingResults through
+    wrapped in a bare ``IdentityResult`` (backward-compatible).
+    """
 
     def __init__(
         self,
         camera_id: str,
+        mapper: IdentityMapper | None,
         input_queue: PipelineQueue[TrackingResult],
-        callback: Callable[[TrackingResult], None],
+        output_queue: PipelineQueue[IdentityResult],
+        *,
+        metrics: MetricsRegistry | None = None,
+    ) -> None:
+        super().__init__(daemon=True, name=f"identity-{camera_id}")
+        self._camera_id = camera_id
+        self._mapper = mapper
+        self._input = input_queue
+        self._output = output_queue
+        self._metrics = metrics
+        self._log = get_logger("identity.worker", camera_id)
+        self._processed = 0
+
+    def run(self) -> None:
+        from gods_eye.reid.identity_mapper import IdentityResult  # lazy import
+
+        self._log.info("identity_worker_started")
+        fps_timer = time.perf_counter()
+        fps_count = 0
+
+        while True:
+            track_result = self._input.get(timeout=0.5)
+            if track_result is None:
+                if self._input.is_closed:
+                    break
+                continue
+
+            t0 = time.perf_counter()
+            if self._mapper is not None:
+                try:
+                    id_result = self._mapper.process(track_result)
+                except Exception as exc:
+                    self._log.error("identity_error", error=str(exc))
+                    # Graceful fallback: pass through without identities
+                    id_result = IdentityResult(tracking=track_result)
+            else:
+                # Passthrough mode: wrap tracking result as-is
+                id_result = IdentityResult(tracking=track_result)
+
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            if self._metrics is not None:
+                self._metrics.latency_ms.labels(
+                    subsystem="identity", camera_id=self._camera_id
+                ).observe(latency_ms)
+
+            self._output.put(id_result)
+            self._processed += 1
+            fps_count += 1
+
+            elapsed = time.perf_counter() - fps_timer
+            if elapsed >= 1.0 and self._metrics is not None:
+                self._metrics.fps.labels(
+                    subsystem="identity", camera_id=self._camera_id
+                ).set(fps_count / elapsed)
+                fps_timer = time.perf_counter()
+                fps_count = 0
+
+        self._output.close()
+        self._log.info("identity_worker_stopped", processed=self._processed)
+
+    @property
+    def processed_count(self) -> int:
+        return self._processed
+
+
+class OutputWorker(threading.Thread):
+    """Consumes IdentityResults and delivers them via callback."""
+
+    def __init__(
+        self,
+        camera_id: str,
+        input_queue: PipelineQueue[IdentityResult],
+        callback: Callable[[IdentityResult], None],
     ) -> None:
         super().__init__(daemon=True, name=f"output-{camera_id}")
         self._camera_id = camera_id
@@ -318,8 +409,14 @@ class OutputWorker(threading.Thread):
 class Pipeline:
     """End-to-end single-camera pipeline.
 
-    Wires: CaptureThread → DetectionWorker → TrackingWorker → OutputWorker
-    with bounded queues and graceful shutdown.
+    Wires: CaptureThread → DetectionWorker → TrackingWorker →
+    IdentityWorker → OutputWorker with bounded queues and graceful
+    shutdown.
+
+    When ``identity_mapper`` is None the IdentityWorker operates in
+    passthrough mode — tracking results flow through wrapped in bare
+    ``IdentityResult`` objects.  This keeps the pipeline backward-
+    compatible with Phase 1 callers.
     """
 
     def __init__(
@@ -329,8 +426,9 @@ class Pipeline:
         detector: Detector,
         tracker: Tracker,
         settings: Settings,
-        on_result: Callable[[TrackingResult], None],
+        on_result: Callable[[IdentityResult], None],
         *,
+        identity_mapper: IdentityMapper | None = None,
         metrics: MetricsRegistry | None = None,
     ) -> None:
         self._camera_id = camera_id
@@ -355,6 +453,12 @@ class Pipeline:
             camera_id=camera_id,
             metrics=metrics,
         )
+        self._identity_q: PipelineQueue[IdentityResult] = PipelineQueue(
+            maxsize=settings.track_queue_size,
+            queue_name=f"{camera_id}/identities",
+            camera_id=camera_id,
+            metrics=metrics,
+        )
 
         # Workers
         self._capture = CameraCaptureThread(
@@ -366,7 +470,11 @@ class Pipeline:
         self._tracking = TrackingWorker(
             camera_id, tracker, self._det_q, self._track_q, metrics=metrics
         )
-        self._output = OutputWorker(camera_id, self._track_q, on_result)
+        self._identity = IdentityWorker(
+            camera_id, identity_mapper, self._track_q, self._identity_q,
+            metrics=metrics,
+        )
+        self._output = OutputWorker(camera_id, self._identity_q, on_result)
 
     def start(self) -> None:
         """Start all pipeline threads."""
@@ -374,6 +482,7 @@ class Pipeline:
         self._capture.start()
         self._detection.start()
         self._tracking.start()
+        self._identity.start()
         self._output.start()
         self._log.info("pipeline_started")
 
@@ -384,16 +493,19 @@ class Pipeline:
         self._capture.join(timeout=timeout)
         self._detection.join(timeout=timeout)
         self._tracking.join(timeout=timeout)
+        self._identity.join(timeout=timeout)
         self._output.join(timeout=timeout)
         self._log.info(
             "pipeline_stopped",
             captured=self._capture.frame_count,
             detected=self._detection.processed_count,
             tracked=self._tracking.processed_count,
+            identified=self._identity.processed_count,
             delivered=self._output.delivered_count,
             frame_q_drops=self._frame_q_drops,
             det_q_drops=self._det_q.drop_count,
             track_q_drops=self._track_q.drop_count,
+            identity_q_drops=self._identity_q.drop_count,
         )
 
     @property
@@ -411,5 +523,6 @@ class Pipeline:
             "captured": self._capture.frame_count,
             "detected": self._detection.processed_count,
             "tracked": self._tracking.processed_count,
+            "identified": self._identity.processed_count,
             "delivered": self._output.delivered_count,
         }

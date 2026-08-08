@@ -16,6 +16,7 @@ from gods_eye.pipeline import (
     PipelineQueue,
     TrackingResult,
 )
+from gods_eye.reid.identity_mapper import IdentityResult
 from gods_eye.schemas.detection import BoundingBox, Detection
 from gods_eye.schemas.track import Track, TrackState
 
@@ -56,14 +57,16 @@ class TestPipelineQueue:
 
 class TestOutputWorker:
     def test_delivers_results(self) -> None:
-        q: PipelineQueue[TrackingResult] = PipelineQueue(5, "test", "cam")
-        results: list[TrackingResult] = []
+        q: PipelineQueue[IdentityResult] = PipelineQueue(5, "test", "cam")
+        results: list[IdentityResult] = []
 
         worker = OutputWorker("cam", q, results.append)
         worker.start()
 
         pkt = _make_packet()
-        q.put(TrackingResult(packet=pkt, detections=[], tracks=[]))
+        q.put(IdentityResult(
+            tracking=TrackingResult(packet=pkt, detections=[], tracks=[]),
+        ))
         time.sleep(0.1)
         q.close()
         worker.join(timeout=2.0)
@@ -83,10 +86,10 @@ class TestPipelineE2E:
             track_queue_size=10,
         )
         source = MockFrameSource(num_frames=5)
-        results: list[TrackingResult] = []
+        results: list[IdentityResult] = []
         lock = threading.Lock()
 
-        def on_result(r: TrackingResult) -> None:
+        def on_result(r: IdentityResult) -> None:
             with lock:
                 results.append(r)
 

@@ -44,3 +44,14 @@ benchmarks/results/
 
 # MOT17 dataset (5+ GB, not tracked)
 tests/data/MOT17/
+tests/data/MOT17-val/
+
+# Demo videos (converted from MOT17 sequences)
+tests/data/demo_videos/*.mp4
+tests/data/demo_outputs/
+
+# Downloaded archives
+*.zip
+
+# Downloaded datasets (Market-1501, etc.)
+data/

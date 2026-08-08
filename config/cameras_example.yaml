@@ -1,0 +1,80 @@
+# God's Eye — Camera Topology Configuration
+# This file defines the physical camera layout and relationships.
+# Used by the CameraGraph (Phase 3) for cross-camera intelligence.
+
+cameras:
+  - camera_id: "cam_entrance"
+    display_name: "Main Entrance"
+    source_uri: "rtsp://192.168.1.10:554/stream1"
+    location_label: "Building A, Ground Floor, Main Entrance"
+    resolution: [1920, 1080]
+    fps_nominal: 25.0
+    adjacent_cameras: ["cam_lobby", "cam_parking"]
+    transition_priors:
+      cam_lobby: 0.7
+      cam_parking: 0.2
+    zones:
+      - zone_id: "entrance_door"
+        display_name: "Door Area"
+        zone_type: "entrance"
+        polygon: [[0.3, 0.7], [0.7, 0.7], [0.7, 1.0], [0.3, 1.0]]
+        expected_dwell_s: [1.0, 10.0]
+      - zone_id: "entrance_transit"
+        display_name: "Transit Corridor"
+        zone_type: "transit"
+        polygon: [[0.2, 0.3], [0.8, 0.3], [0.8, 0.7], [0.2, 0.7]]
+        expected_dwell_s: [2.0, 30.0]
+
+  - camera_id: "cam_lobby"
+    display_name: "Lobby"
+    source_uri: "rtsp://192.168.1.11:554/stream1"
+    location_label: "Building A, Ground Floor, Lobby"
+    resolution: [1920, 1080]
+    fps_nominal: 25.0
+    adjacent_cameras: ["cam_entrance", "cam_hallway"]
+    transition_priors:
+      cam_entrance: 0.3
+      cam_hallway: 0.5
+    zones:
+      - zone_id: "lobby_seating"
+        display_name: "Seating Area"
+        zone_type: "dwell"
+        polygon: [[0.0, 0.0], [0.4, 0.0], [0.4, 0.5], [0.0, 0.5]]
+        expected_dwell_s: [30.0, 600.0]
+      - zone_id: "lobby_reception"
+        display_name: "Reception Desk"
+        zone_type: "dwell"
+        polygon: [[0.5, 0.2], [0.9, 0.2], [0.9, 0.6], [0.5, 0.6]]
+        expected_dwell_s: [10.0, 120.0]
+
+  - camera_id: "cam_hallway"
+    display_name: "Hallway"
+    source_uri: "rtsp://192.168.1.12:554/stream1"
+    location_label: "Building A, Ground Floor, East Hallway"
+    resolution: [1280, 720]
+    fps_nominal: 25.0
+    adjacent_cameras: ["cam_lobby"]
+    transition_priors:
+      cam_lobby: 0.6
+    zones:
+      - zone_id: "hallway_transit"
+        display_name: "Hallway Corridor"
+        zone_type: "transit"
+        polygon: [[0.0, 0.3], [1.0, 0.3], [1.0, 0.7], [0.0, 0.7]]
+        expected_dwell_s: [5.0, 60.0]
+
+  - camera_id: "cam_parking"
+    display_name: "Parking Lot"
+    source_uri: "rtsp://192.168.1.13:554/stream1"
+    location_label: "Building A, Exterior, Parking Lot"
+    resolution: [1920, 1080]
+    fps_nominal: 25.0
+    adjacent_cameras: ["cam_entrance"]
+    transition_priors:
+      cam_entrance: 0.8
+    zones:
+      - zone_id: "parking_entry"
+        display_name: "Parking Entry"
+        zone_type: "entrance"
+        polygon: [[0.4, 0.6], [0.6, 0.6], [0.6, 0.9], [0.4, 0.9]]
+        expected_dwell_s: [1.0, 15.0]

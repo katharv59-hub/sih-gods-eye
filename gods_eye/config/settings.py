@@ -57,12 +57,35 @@ class Settings:
     track_dead_timeout: int = 120      # frames before LOST → DEAD
 
     # ── Re-ID (§14 Configuration Keys) ─────────────────────────────────
+    reid_model: str = "osnet_x1_0"
+    reid_weights_path: Optional[str] = None
     reid_match_threshold: float = 0.75
+    reid_top_k: int = 5
     reid_ema_alpha: float = 0.9
+    reid_extract_interval: int = 5     # frames between OSNet feature extractions for cached tracks
     identity_lost_timeout_s: int = 300
     identity_ttl_s: int = 86400
     embedding_history_len: int = 50
     gallery_max_size: int = 10_000
+
+    # ── Multi-Camera / Phase 3 ─────────────────────────────────────────
+    camera_config_path: Optional[str] = None   # Path to cameras YAML topology
+    cross_camera_prior_weight: float = 0.1     # Weight for transition prior scoring
+
+    # ── Environmental Intelligence / Phase 3.5 (§16) ───────────────────
+    warmup_bg_frames: int = 10_000
+    warmup_bg_confidence: float = 0.85
+    warmup_occupancy_samples: int = 14
+    occupancy_anomaly_sigma: float = 3.0
+    anomaly_min_confidence: float = 0.70
+    bg_learning_rate: float = 0.01
+    force_degraded_mode: bool = False
+
+    # ── Temporal Memory / Phase 4 ──────────────────────────────────────
+    event_store_path: str = "data/events.db"
+    graph_store_path: str = "data/graph.db"
+    event_log_ttl_s: int = 604_800             # 7 days
+    temporal_batch_size: int = 100
 
     # ── Observability (§7) ─────────────────────────────────────────────
     metrics_port: int = 9090
@@ -101,12 +124,39 @@ class Settings:
             track_lost_timeout=_env_int("GODS_EYE_TRACK_LOST_TIMEOUT", 30),
             track_dead_timeout=_env_int("GODS_EYE_TRACK_DEAD_TIMEOUT", 120),
             # Re-ID
+            reid_model=os.environ.get("GODS_EYE_REID_MODEL", "osnet_x1_0"),
+            reid_weights_path=os.environ.get("GODS_EYE_REID_WEIGHTS_PATH"),
             reid_match_threshold=_env_float("GODS_EYE_REID_MATCH_THRESHOLD", 0.75),
+            reid_top_k=_env_int("GODS_EYE_REID_TOP_K", 5),
             reid_ema_alpha=_env_float("GODS_EYE_REID_EMA_ALPHA", 0.9),
+            reid_extract_interval=_env_int("GODS_EYE_REID_EXTRACT_INTERVAL", 5),
             identity_lost_timeout_s=_env_int("GODS_EYE_IDENTITY_LOST_TIMEOUT_S", 300),
             identity_ttl_s=_env_int("GODS_EYE_IDENTITY_TTL_S", 86400),
             embedding_history_len=_env_int("GODS_EYE_EMBEDDING_HISTORY_LEN", 50),
             gallery_max_size=_env_int("GODS_EYE_GALLERY_MAX_SIZE", 10_000),
+            # Multi-Camera / Phase 3
+            camera_config_path=os.environ.get("GODS_EYE_CAMERA_CONFIG_PATH"),
+            cross_camera_prior_weight=_env_float(
+                "GODS_EYE_CROSS_CAMERA_PRIOR_WEIGHT", 0.1,
+            ),
+            # Environmental Intelligence / Phase 3.5
+            warmup_bg_frames=_env_int("GODS_EYE_WARMUP_BG_FRAMES", 10_000),
+            warmup_bg_confidence=_env_float("GODS_EYE_WARMUP_BG_CONFIDENCE", 0.85),
+            warmup_occupancy_samples=_env_int(
+                "GODS_EYE_WARMUP_OCCUPANCY_SAMPLES", 14
+            ),
+            occupancy_anomaly_sigma=_env_float(
+                "GODS_EYE_OCCUPANCY_ANOMALY_SIGMA", 3.0
+            ),
+            anomaly_min_confidence=_env_float(
+                "GODS_EYE_ANOMALY_MIN_CONFIDENCE", 0.70
+            ),
+            bg_learning_rate=_env_float("GODS_EYE_BG_LEARNING_RATE", 0.01),
+            force_degraded_mode=_env_bool("GODS_EYE_FORCE_DEGRADED_MODE", False),
+            # Temporal Memory / Phase 4
+            event_store_path=os.environ.get("GODS_EYE_EVENT_STORE_PATH", "data/events.db"),
+            event_log_ttl_s=_env_int("GODS_EYE_EVENT_LOG_TTL_S", 604_800),
+            temporal_batch_size=_env_int("GODS_EYE_TEMPORAL_BATCH_SIZE", 100),
             # Observability
             metrics_port=_env_int("GODS_EYE_METRICS_PORT", 9090),
             log_level=os.environ.get("GODS_EYE_LOG_LEVEL", "INFO"),
