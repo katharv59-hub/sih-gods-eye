@@ -166,6 +166,32 @@ class MetricsRegistry:
             registry=reg,
         )
 
+        # ── Reasoning metrics (Phase 5.2 / 5.3 / 5.4) ───────────────────────
+        self.reasoning_tool_calls_total = Counter(
+            "gods_eye_reasoning_tool_calls_total",
+            "Total deterministic tool invocations",
+            ["tool_name", "status"],
+            registry=reg,
+        )
+        self.reasoning_planner_queries_total = Counter(
+            "gods_eye_reasoning_planner_queries_total",
+            "Total NLQ queries planned",
+            ["status"],
+            registry=reg,
+        )
+        self.reasoning_engine_queries_total = Counter(
+            "gods_eye_reasoning_engine_queries_total",
+            "Total reasoning engine queries processed",
+            ["status"],
+            registry=reg,
+        )
+        self.reasoning_engine_latency_ms = Histogram(
+            "gods_eye_reasoning_engine_latency_ms",
+            "Reasoning engine query processing latency in milliseconds",
+            buckets=(1, 5, 10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000),
+            registry=reg,
+        )
+
     def start_server(self, port: int = 9090) -> None:
         """Start the Prometheus metrics HTTP endpoint."""
         start_http_server(port)

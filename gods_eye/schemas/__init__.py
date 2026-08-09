@@ -7,6 +7,12 @@ Schema changes require an ADR entry.
 IMPORTANT: This package must NEVER import from other gods_eye modules.
 """
 
+from gods_eye.schemas.behavioral import (
+    BehavioralAnomalyResult,
+    PredictedDestination,
+    PredictionResult,
+    TrajectoryCluster,
+)
 from gods_eye.schemas.camera import CameraNode, Zone
 from gods_eye.schemas.detection import BoundingBox, Detection
 from gods_eye.schemas.environment import (
@@ -22,6 +28,14 @@ from gods_eye.schemas.observation import (
     ObservationPriority,
     TemporalObservation,
     TemporalObservationType,
+)
+from gods_eye.schemas.reasoning import (
+    Evidence,
+    QueryStatus,
+    ReasoningResult,
+    ToolCall,
+    ToolResult,
+    UserQuery,
 )
 from gods_eye.schemas.timeline import (
     CameraTimeline,
@@ -56,4 +70,14 @@ __all__ = [
     "CameraTimeline",
     "ZoneTimeline",
     "ReplayFrame",
+    "QueryStatus",
+    "UserQuery",
+    "ToolCall",
+    "Evidence",
+    "ToolResult",
+    "ReasoningResult",
+    "TrajectoryCluster",
+    "PredictedDestination",
+    "PredictionResult",
+    "BehavioralAnomalyResult",
 ]

@@ -1,4 +1,11 @@
-"""Situational reasoning — Query engine, NLQ interface.
+from gods_eye.reasoning.engine import ReasoningEngine
+from gods_eye.reasoning.planner import LLMProvider, NLQPlanner, RuleBasedPlanner
+from gods_eye.reasoning.tools import ToolDispatcher
 
-Phase 5 deliverable: LLM + structured tool calls into the graph.
-"""
+__all__ = [
+    "ReasoningEngine",
+    "ToolDispatcher",
+    "NLQPlanner",
+    "RuleBasedPlanner",
+    "LLMProvider",
+]
