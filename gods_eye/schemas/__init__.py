@@ -37,6 +37,14 @@ from gods_eye.schemas.reasoning import (
     ToolResult,
     UserQuery,
 )
+from gods_eye.schemas.situational import (
+    Hypothesis,
+    HypothesisNode,
+    HypothesisTree,
+    IdentityCandidate,
+    RiskSignal,
+    SituationalState,
+)
 from gods_eye.schemas.timeline import (
     CameraTimeline,
     IdentityTimeline,
@@ -80,4 +88,10 @@ __all__ = [
     "PredictedDestination",
     "PredictionResult",
     "BehavioralAnomalyResult",
+    "IdentityCandidate",
+    "Hypothesis",
+    "HypothesisNode",
+    "HypothesisTree",
+    "SituationalState",
+    "RiskSignal",
 ]

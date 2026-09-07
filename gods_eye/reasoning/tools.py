@@ -31,12 +31,15 @@ from gods_eye.memory.graph_store import BaseGraphStore
 from gods_eye.memory.timeline_engine import TimelineReconstructionEngine
 from gods_eye.observability.logger import get_logger
 from gods_eye.observability.metrics import MetricsRegistry
+from gods_eye.schemas.environment import SystemMode
 from gods_eye.schemas.event import Event, EventType
 from gods_eye.schemas.reasoning import (
     Evidence,
     ToolCall,
     ToolResult,
 )
+from gods_eye.situational.evaluator import SituationalRiskEvaluator
+from gods_eye.situational.hypothesis import HypothesisGenerator
 
 _log = get_logger("reasoning.tools")
 
@@ -53,6 +56,8 @@ class ToolDispatcher:
         metrics: Optional[MetricsRegistry] = None,
         clustering_engine: Optional[TrajectoryClusteringEngine] = None,
         behavioral_predictor: Optional[MarkovBehavioralPredictor] = None,
+        situational_evaluator: Optional[SituationalRiskEvaluator] = None,
+        hypothesis_generator: Optional[HypothesisGenerator] = None,
     ) -> None:
         self._event_store = event_store
         self._graph_store = graph_store
@@ -77,6 +82,16 @@ class ToolDispatcher:
             if behavioral_predictor is not None
             else MarkovBehavioralPredictor()
         )
+        self._situational_evaluator = (
+            situational_evaluator
+            if situational_evaluator is not None
+            else SituationalRiskEvaluator()
+        )
+        self._hypothesis_generator = (
+            hypothesis_generator
+            if hypothesis_generator is not None
+            else HypothesisGenerator()
+        )
 
         # Register handler mapping
         self._handlers: dict[str, Callable[[ToolCall], ToolResult]] = {
@@ -90,6 +105,8 @@ class ToolDispatcher:
             "get_scene_state": self._handle_get_scene_state,
             "get_trajectory_clusters": self._handle_get_trajectory_clusters,
             "get_behavioral_prediction": self._handle_get_behavioral_prediction,
+            "get_situational_risk": self._handle_get_situational_risk,
+            "get_hypothesis_tree": self._handle_get_hypothesis_tree,
         }
 
     def dispatch(self, call: ToolCall) -> ToolResult:
@@ -861,4 +878,239 @@ class ToolDispatcher:
             success=True,
             data=res.to_dict(),
             evidence_list=evidence_list,
+        )
+
+    # ── Tool 11: get_situational_risk (Phase 7.3) ───────────────────────────
+    def _handle_get_situational_risk(self, call: ToolCall) -> ToolResult:
+        w_start = call.arguments.get("window_start_ns", call.arguments.get("start_ns"))
+        w_end = call.arguments.get("window_end_ns", call.arguments.get("end_ns"))
+        mode_arg = call.arguments.get("system_mode", "operational_mode")
+        evidence_ids_arg = call.arguments.get("evidence_ids")
+
+        if w_start is None or w_end is None:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="Missing required argument 'window_start_ns' or 'window_end_ns'",
+            )
+
+        try:
+            start_ns = int(w_start)
+            end_ns = int(w_end)
+        except (ValueError, TypeError):
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="window_start_ns and window_end_ns MUST be valid integer nanosecond timestamps",
+            )
+
+        if start_ns < 0 or end_ns < 0:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="window_start_ns and window_end_ns MUST be non-negative",
+            )
+
+        if start_ns > end_ns:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message=f"window_start_ns ({start_ns}) MUST be <= window_end_ns ({end_ns})",
+            )
+
+        if (end_ns - start_ns) > 86_400_000_000_000:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="Window duration MUST NOT exceed 24 hours (86400000000000 ns)",
+            )
+
+        # Validate SystemMode
+        if isinstance(mode_arg, SystemMode):
+            system_mode = mode_arg
+        elif isinstance(mode_arg, str):
+            mode_lower = mode_arg.lower().strip()
+            if mode_lower in ("operational_mode", "operational"):
+                system_mode = SystemMode.OPERATIONAL_MODE
+            elif mode_lower in ("learning_mode", "learning"):
+                system_mode = SystemMode.LEARNING_MODE
+            elif mode_lower in ("degraded_mode", "degraded"):
+                system_mode = SystemMode.DEGRADED_MODE
+            else:
+                return ToolResult(
+                    call_id=call.call_id,
+                    tool_name=call.tool_name,
+                    success=False,
+                    error_message=f"Invalid system_mode '{mode_arg}'. Must be one of learning_mode, operational_mode, degraded_mode",
+                )
+        else:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message=f"Invalid system_mode type: {type(mode_arg)}",
+            )
+
+        # Gather evidence items
+        evidence_items: list[Evidence] = []
+        if "evidence_items" in call.arguments and isinstance(call.arguments["evidence_items"], (list, tuple)):
+            evidence_items = [ev for ev in call.arguments["evidence_items"] if isinstance(ev, Evidence)]
+        elif self._event_store is not None:
+            events = self._event_store.query_events(start_ns=start_ns, end_ns=end_ns, limit=1000)
+            for ev_obj in events:
+                e_item = Evidence(
+                    evidence_id=ev_obj.event_id,
+                    source_store="event_store",
+                    record_type="event",
+                    record_id=ev_obj.event_id,
+                    timestamp_ns=ev_obj.timestamp_ns,
+                    camera_id=ev_obj.camera_id,
+                    payload=ev_obj.payload,
+                )
+                evidence_items.append(e_item)
+
+        if evidence_ids_arg is not None and isinstance(evidence_ids_arg, (list, tuple)):
+            e_set = set(str(eid) for eid in evidence_ids_arg)
+            evidence_items = [ev for ev in evidence_items if ev.evidence_id in e_set]
+
+        risk_signal = self._situational_evaluator.evaluate(
+            evidence_items=evidence_items,
+            system_mode=system_mode,
+            window_start_ns=start_ns,
+            window_end_ns=end_ns,
+        )
+
+        contributing_evidence = [
+            ev for ev in evidence_items if ev.evidence_id in risk_signal.evidence_ids
+        ]
+
+        return ToolResult(
+            call_id=call.call_id,
+            tool_name=call.tool_name,
+            success=True,
+            data=risk_signal.to_dict(),
+            evidence_list=contributing_evidence,
+        )
+
+    # ── Tool 12: get_hypothesis_tree (Phase 7.4) ───────────────────────────
+    def _handle_get_hypothesis_tree(self, call: ToolCall) -> ToolResult:
+        w_start = call.arguments.get("window_start_ns", call.arguments.get("start_ns"))
+        w_end = call.arguments.get("window_end_ns", call.arguments.get("end_ns"))
+        sub_ref = call.arguments.get("subject_ref")
+        max_d = call.arguments.get("max_depth", 3)
+        max_b = call.arguments.get("max_branching", 5)
+        min_conf = call.arguments.get("min_confidence", 0.20)
+
+        if w_start is None or w_end is None:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="Missing required argument 'window_start_ns' or 'window_end_ns'",
+            )
+
+        try:
+            start_ns = int(w_start)
+            end_ns = int(w_end)
+        except (ValueError, TypeError):
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="window_start_ns and window_end_ns MUST be valid integer nanosecond timestamps",
+            )
+
+        if start_ns < 0 or end_ns < 0:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="window_start_ns and window_end_ns MUST be non-negative",
+            )
+
+        if start_ns > end_ns:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message=f"window_start_ns ({start_ns}) MUST be <= window_end_ns ({end_ns})",
+            )
+
+        if (end_ns - start_ns) > 86_400_000_000_000:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="Window duration MUST NOT exceed 24 hours (86400000000000 ns)",
+            )
+
+        # Gather evidence items
+        evidence_items: list[Evidence] = []
+        if "evidence_items" in call.arguments and isinstance(call.arguments["evidence_items"], (list, tuple)):
+            evidence_items = [ev for ev in call.arguments["evidence_items"] if isinstance(ev, Evidence)]
+        elif self._event_store is not None:
+            events = self._event_store.query_events(start_ns=start_ns, end_ns=end_ns, limit=1000)
+            for ev_obj in events:
+                e_item = Evidence(
+                    evidence_id=ev_obj.event_id,
+                    source_store="event_store",
+                    record_type="event",
+                    record_id=ev_obj.event_id,
+                    timestamp_ns=ev_obj.timestamp_ns,
+                    camera_id=ev_obj.camera_id,
+                    payload=ev_obj.payload,
+                )
+                evidence_items.append(e_item)
+
+        if not evidence_items:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=True,
+                data={"hypothesis_trees": [], "count": 0},
+                evidence_list=[],
+            )
+
+        trees = self._hypothesis_generator.generate_trees(
+            evidence_items=evidence_items,
+            window_start_ns=start_ns,
+            window_end_ns=end_ns,
+            max_depth=int(max_d),
+            max_branching=int(max_b),
+            min_confidence=float(min_conf),
+            subject_ref=str(sub_ref) if sub_ref else None,
+        )
+
+        if not trees:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=True,
+                data={"hypothesis_trees": [], "count": 0},
+                evidence_list=[],
+            )
+
+        referenced_ids: set[str] = set()
+
+        def _collect_ids(node):
+            referenced_ids.update(node.hypothesis.evidence_ids)
+            for child in node.children:
+                _collect_ids(child)
+
+        for tree in trees:
+            _collect_ids(tree.root_node)
+
+        referenced_evidence = [ev for ev in evidence_items if ev.evidence_id in referenced_ids]
+
+        return ToolResult(
+            call_id=call.call_id,
+            tool_name=call.tool_name,
+            success=True,
+            data={"hypothesis_trees": [t.to_dict() for t in trees], "count": len(trees)},
+            evidence_list=referenced_evidence,
         )

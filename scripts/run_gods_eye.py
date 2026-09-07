@@ -28,6 +28,8 @@ def run_command(cmd: list[str], env: dict[str, str] | None = None) -> bool:
     current_env = os.environ.copy()
     if env:
         current_env.update(env)
+    pythonpath = current_env.get("PYTHONPATH", "")
+    current_env["PYTHONPATH"] = str(PROJECT_ROOT) + (os.pathsep + pythonpath if pythonpath else "")
     try:
         result = subprocess.run(cmd, env=current_env, cwd=str(PROJECT_ROOT))
         if result.returncode == 0:

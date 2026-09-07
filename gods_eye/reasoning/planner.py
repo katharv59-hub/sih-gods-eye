@@ -35,6 +35,8 @@ APPROVED_TOOLS: set[str] = {
     "get_scene_state",
     "get_trajectory_clusters",
     "get_behavioral_prediction",
+    "get_situational_risk",
+    "get_hypothesis_tree",
 }
 
 DEFERRED_TOOLS: set[str] = set()
@@ -169,6 +171,63 @@ class RuleBasedPlanner:
                 arguments=args,
             )
             return QueryStatus.SUCCESS, [tc], "Mapped to get_behavioral_prediction"
+
+        # Rule 11: Situational risk query (Phase 7.3)
+        if any(
+            w in text_lower
+            for w in [
+                "situational risk",
+                "security risk",
+                "risk level",
+                "is there any risk",
+                "evaluate risk",
+                "how risky",
+                "threat level",
+                "situational hazard",
+            ]
+        ):
+            w_start = start_ns if start_ns is not None else max(0, query.timestamp_ns - int(query.default_time_window_s * 1e9))
+            w_end = end_ns if end_ns is not None else query.timestamp_ns
+            tc = ToolCall(
+                call_id=f"call_{uuid.uuid4().hex[:8]}",
+                tool_name="get_situational_risk",
+                arguments={
+                    "window_start_ns": w_start,
+                    "window_end_ns": w_end,
+                    "system_mode": "operational_mode",
+                },
+            )
+            return QueryStatus.SUCCESS, [tc], "Mapped to get_situational_risk"
+
+        # Rule 12: Hypothesis tree query (Phase 7.4)
+        if any(
+            w in text_lower
+            for w in [
+                "hypothesis tree",
+                "competing hypotheses",
+                "active hypotheses",
+                "why is this situation",
+                "hypotheses for",
+                "show hypothesis",
+                "explain hypotheses",
+            ]
+        ):
+            w_start = start_ns if start_ns is not None else max(0, query.timestamp_ns - int(query.default_time_window_s * 1e9))
+            w_end = end_ns if end_ns is not None else query.timestamp_ns
+            args: dict[str, Any] = {
+                "window_start_ns": w_start,
+                "window_end_ns": w_end,
+                "max_depth": 3,
+                "min_confidence": 0.20,
+            }
+            if global_id:
+                args["subject_ref"] = global_id
+            tc = ToolCall(
+                call_id=f"call_{uuid.uuid4().hex[:8]}",
+                tool_name="get_hypothesis_tree",
+                arguments=args,
+            )
+            return QueryStatus.SUCCESS, [tc], "Mapped to get_hypothesis_tree"
 
         # Priority Rule 1: Explicit Event Search Query (e.g. "search event", "show events", or matching explicit EventType)
         matched_event_type: Optional[str] = None
