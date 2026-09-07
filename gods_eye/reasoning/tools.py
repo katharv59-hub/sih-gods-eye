@@ -107,6 +107,8 @@ class ToolDispatcher:
             "get_behavioral_prediction": self._handle_get_behavioral_prediction,
             "get_situational_risk": self._handle_get_situational_risk,
             "get_hypothesis_tree": self._handle_get_hypothesis_tree,
+            # Phase 8 — SIH 26187
+            "get_plate_history": self._handle_get_plate_history,
         }
 
     def dispatch(self, call: ToolCall) -> ToolResult:
@@ -1114,3 +1116,92 @@ class ToolDispatcher:
             data={"hypothesis_trees": [t.to_dict() for t in trees], "count": len(trees)},
             evidence_list=referenced_evidence,
         )
+
+    # ── Tool 13: get_plate_history (Phase 8 — SIH 26187) ────────────────
+
+    def _handle_get_plate_history(self, call: ToolCall) -> ToolResult:
+        """Handle get_plate_history tool call.
+
+        Queries event store for ANPR_READING events matching a plate text.
+        """
+        plate_text = call.arguments.get("plate_text", "")
+        limit = call.arguments.get("limit", 50)
+        start_ns = call.arguments.get("start_ns")
+        end_ns = call.arguments.get("end_ns")
+
+        if not plate_text or not str(plate_text).strip():
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="plate_text argument is required",
+            )
+
+        if self._event_store is None:
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message="EventStore not available",
+            )
+
+        try:
+            events = self._event_store.query_events(
+                event_type=EventType.ANPR_READING,
+                start_ns=int(start_ns) if start_ns else None,
+                end_ns=int(end_ns) if end_ns else None,
+                limit=int(limit) * 5,
+            )
+
+            # Filter by plate text
+            matching = []
+            for ev in events:
+                ev_meta = ev.metadata if hasattr(ev, "metadata") and ev.metadata else getattr(ev, "payload", {})
+                ev_plate = ev_meta.get("plate_text", "") if isinstance(ev_meta, dict) else ""
+                if str(plate_text).upper() in str(ev_plate).upper():
+                    matching.append(ev)
+                    if len(matching) >= int(limit):
+                        break
+
+            readings = []
+            evidence_list = []
+            for ev in matching:
+                ev_meta = ev.metadata if hasattr(ev, "metadata") and ev.metadata else getattr(ev, "payload", {})
+                plate_str = ev_meta.get("plate_text", "") if isinstance(ev_meta, dict) else ""
+                readings.append(
+                    {
+                        "event_id": ev.event_id,
+                        "camera_id": ev.camera_id,
+                        "timestamp_ns": ev.timestamp_ns,
+                        "plate_text": plate_str,
+                        "confidence": ev.confidence,
+                    }
+                )
+                evidence_list.append(
+                    Evidence(
+                        evidence_id=ev.event_id,
+                        source_store="event_store",
+                        record_type="event",
+                        record_id=ev.event_id,
+                        timestamp_ns=ev.timestamp_ns,
+                        camera_id=ev.camera_id,
+                        payload=ev_meta if isinstance(ev_meta, dict) else {},
+                    )
+                )
+
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=True,
+                data={"readings": readings, "count": len(readings)},
+                evidence_list=evidence_list,
+            )
+
+        except Exception as exc:
+            _log.error("get_plate_history_error", error=str(exc))
+            return ToolResult(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                success=False,
+                error_message=f"Query error: {exc}",
+            )

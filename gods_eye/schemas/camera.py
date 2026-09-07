@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from gods_eye.schemas.detection import BoundingBox
 
@@ -37,6 +38,10 @@ class Zone:
     polygon: list[tuple[float, float]]
     zone_type: str
     expected_dwell_s: tuple[float, float] = (0.0, 0.0)
+    # Phase 9 — SIH 26187 zone intelligence extensions
+    allowed_classes: list[str] = field(default_factory=lambda: ["person"])
+    allowed_time_window: Optional[tuple[int, int]] = None  # (start_hour, end_hour) or None = 24/7
+    direction_rules: Optional[str] = None  # e.g. "entry_only", "exit_only", None = bidirectional
 
 
 @dataclass

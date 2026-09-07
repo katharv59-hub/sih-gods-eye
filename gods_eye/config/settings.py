@@ -98,6 +98,26 @@ class Settings:
     alert_frame_drop_rate_max: float = 0.05
     alert_gpu_memory_max_pct: float = 0.90
 
+    # ── Vehicle Detection / Phase 8 (SIH 26187) ──────────────────────
+    vehicle_detection_model: str = "yolov8n.pt"
+    vehicle_detection_confidence: float = 0.30
+    anpr_min_confidence: float = 0.60
+
+    # ── Spatial Intelligence / Phase 9 (SIH 26187) ────────────────────
+    night_event_min_confidence: float = 0.80
+
+    # ── Alert Engine / Phase 10 (SIH 26187) ──────────────────────────
+    alert_min_severity: str = "MEDIUM"
+    incident_merge_window_s: float = 30.0
+    alert_store_path: str = "data/alerts.db"
+
+    # ── Evidence / Phase 10 (SIH 26187) ──────────────────────────────
+    evidence_retention_days: int = 30
+    evidence_base_path: str = "data/evidence"
+
+    # ── Graph Store / Phase 4 ─────────────────────────────────────────
+    graph_store_path: str = "data/graph.db"
+
     # ── Security (§9) ─────────────────────────────────────────────────
     api_token: Optional[str] = None
 
@@ -172,4 +192,33 @@ class Settings:
             ),
             # Security
             api_token=os.environ.get("GODS_EYE_API_TOKEN"),
+            # Vehicle Detection / Phase 8
+            vehicle_detection_model=os.environ.get(
+                "GODS_EYE_VEHICLE_DETECTION_MODEL", "yolov8n.pt"
+            ),
+            vehicle_detection_confidence=_env_float(
+                "GODS_EYE_VEHICLE_DETECTION_CONFIDENCE", 0.30
+            ),
+            anpr_min_confidence=_env_float("GODS_EYE_ANPR_MIN_CONFIDENCE", 0.60),
+            # Spatial Intelligence / Phase 9
+            night_event_min_confidence=_env_float(
+                "GODS_EYE_NIGHT_EVENT_MIN_CONFIDENCE", 0.80
+            ),
+            # Alert Engine / Phase 10
+            alert_min_severity=os.environ.get("GODS_EYE_ALERT_MIN_SEVERITY", "MEDIUM"),
+            incident_merge_window_s=_env_float(
+                "GODS_EYE_INCIDENT_MERGE_WINDOW_S", 30.0
+            ),
+            alert_store_path=os.environ.get(
+                "GODS_EYE_ALERT_STORE_PATH", "data/alerts.db"
+            ),
+            # Evidence / Phase 10
+            evidence_retention_days=_env_int("GODS_EYE_EVIDENCE_RETENTION_DAYS", 30),
+            evidence_base_path=os.environ.get(
+                "GODS_EYE_EVIDENCE_BASE_PATH", "data/evidence"
+            ),
+            # Graph Store
+            graph_store_path=os.environ.get(
+                "GODS_EYE_GRAPH_STORE_PATH", "data/graph.db"
+            ),
         )

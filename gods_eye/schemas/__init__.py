@@ -53,6 +53,13 @@ from gods_eye.schemas.timeline import (
     ZoneTimeline,
 )
 from gods_eye.schemas.track import Track, TrackState
+from gods_eye.schemas.vehicle import (
+    VehicleClassType,
+    VehicleDetection,
+    VehicleTrack,
+    VehicleTrackState,
+)
+from gods_eye.schemas.alert import Alert, AlertStatus
 
 __all__ = [
     "BoundingBox",
@@ -94,4 +101,12 @@ __all__ = [
     "HypothesisTree",
     "SituationalState",
     "RiskSignal",
+    # Phase 8 — SIH 26187
+    "VehicleDetection",
+    "VehicleTrack",
+    "VehicleTrackState",
+    "VehicleClassType",
+    # Phase 10 — SIH 26187
+    "Alert",
+    "AlertStatus",
 ]

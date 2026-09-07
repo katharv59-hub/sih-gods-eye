@@ -37,6 +37,8 @@ APPROVED_TOOLS: set[str] = {
     "get_behavioral_prediction",
     "get_situational_risk",
     "get_hypothesis_tree",
+    # Phase 8 — SIH 26187
+    "get_plate_history",
 }
 
 DEFERRED_TOOLS: set[str] = set()
@@ -111,6 +113,45 @@ class RuleBasedPlanner:
             elif unit in ("hour", "hr"):
                 seconds = amount * 3600
             start_ns = query.timestamp_ns - int(seconds * 1e9)
+
+        # Plate extraction (e.g. "plate DL01AB1234", "plate: MH12DE1433", or plate regex)
+        plate_match = re.search(
+            r"\bplate\s*[:=]?\s*([a-zA-Z0-9_-]+)\b", query.text, re.IGNORECASE
+        )
+        plate_text = plate_match.group(1) if plate_match else None
+        if not plate_text:
+            gen_plate = re.search(r"\b([A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4})\b", query.text)
+            if gen_plate:
+                plate_text = gen_plate.group(1)
+
+        # Rule 13: License plate history query (Phase 8 — SIH 26187)
+        if any(
+            w in text_lower
+            for w in [
+                "plate history",
+                "license plate",
+                "number plate",
+                "plate reading",
+                "where was plate",
+                "track plate",
+                "find plate",
+                "plate sightings",
+            ]
+        ) or (plate_text and any(w in text_lower for w in ["plate", "vehicle", "seen", "sightings", "history", "where"])):
+            args_plate: dict[str, Any] = {}
+            if plate_text:
+                args_plate["plate_text"] = plate_text
+            if camera_id:
+                args_plate["camera_id"] = camera_id
+            if start_ns:
+                args_plate["start_ns"] = start_ns
+                args_plate["end_ns"] = end_ns
+            tc = ToolCall(
+                call_id=f"call_{uuid.uuid4().hex[:8]}",
+                tool_name="get_plate_history",
+                arguments=args_plate,
+            )
+            return QueryStatus.SUCCESS, [tc], "Mapped to get_plate_history"
 
         # Rule 9: Trajectory clusters query (Phase 6.6)
         if any(

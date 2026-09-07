@@ -25,6 +25,19 @@ class EventType(Enum):
     SYSTEM_MODE_CHANGED = "system_mode_changed"
     MODEL_DRIFT_DETECTED = "model_drift_detected"
     WARM_UP_COMPLETE = "warm_up_complete"
+    # Vehicle perception events (Phase 8 — SIH 26187)
+    VEHICLE_DETECTED = "vehicle_detected"
+    PLATE_DETECTED = "plate_detected"
+    ANPR_READING = "anpr_reading"
+    FACE_DETECTED = "face_detected"
+    # Spatial & event intelligence events (Phase 9 — SIH 26187)
+    VIRTUAL_FENCE_CROSSED = "virtual_fence_crossed"
+    RESTRICTED_ZONE_INTRUSION = "restricted_zone_intrusion"
+    LOITERING_DETECTED = "loitering_detected"
+    NIGHT_MOVEMENT = "night_movement"
+    # Alert lifecycle events (Phase 10 — SIH 26187)
+    ALERT_CREATED = "alert_created"
+    ALERT_RESOLVED = "alert_resolved"
 
 
 @dataclass

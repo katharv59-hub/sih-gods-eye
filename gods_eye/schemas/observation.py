@@ -22,6 +22,7 @@ class TemporalObservationType(Enum):
     ZONE_OCCUPANCY = "zone_occupancy"
     ENVIRONMENTAL_STATE = "environmental_state"
     SYSTEM_EVENT = "system_event"
+    VEHICLE_PRESENCE = "vehicle_presence"  # Phase 8 — SIH 26187
 
 
 class ObservationPriority(Enum):
