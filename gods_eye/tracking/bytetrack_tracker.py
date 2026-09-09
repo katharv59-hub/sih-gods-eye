@@ -30,6 +30,7 @@ class _TrackInfo:
     velocity: tuple[float, float] = (0.0, 0.0)      # (dx, dy) pixels/frame
     lost_frame_count: int = 0
     detection_history: list[str] = field(default_factory=list)
+    class_label: str = "person"
 
 
 _DETECTION_HISTORY_CAP: int = 50
@@ -44,15 +45,37 @@ class ByteTrackTracker(Tracker):
     Not thread-safe — must be called from a single thread.
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        stream_prefix: str = "",
+        track_activation_threshold: float | None = None,
+        lost_track_buffer: int | None = None,
+        minimum_matching_threshold: float = 0.8,
+        frame_rate: int = 30,
+    ) -> None:
+        if settings is None:
+            settings = Settings()
         self._settings = settings
+        self._stream_prefix = stream_prefix
         self._log = get_logger("tracking")
 
+        activation_thresh = (
+            track_activation_threshold
+            if track_activation_threshold is not None
+            else settings.detection_confidence_threshold
+        )
+        lost_buffer = (
+            lost_track_buffer
+            if lost_track_buffer is not None
+            else settings.track_lost_timeout
+        )
+
         self._tracker = sv.ByteTrack(
-            track_activation_threshold=settings.detection_confidence_threshold,
-            lost_track_buffer=settings.track_lost_timeout,
-            minimum_matching_threshold=0.8,
-            frame_rate=30,
+            track_activation_threshold=activation_thresh,
+            lost_track_buffer=lost_buffer,
+            minimum_matching_threshold=minimum_matching_threshold,
+            frame_rate=frame_rate,
         )
 
         # Internal track state registry: ByteTrack track_id → _TrackInfo
@@ -62,9 +85,17 @@ class ByteTrackTracker(Tracker):
         self._log.info(
             "tracker_init",
             tracker="ByteTrack",
-            lost_buffer=settings.track_lost_timeout,
+            stream_prefix=stream_prefix,
+            lost_buffer=lost_buffer,
             dead_timeout=settings.track_dead_timeout,
         )
+
+    def _format_track_id(self, camera_id: str, tid: int) -> str:
+        """Format track ID with optional stream prefix for ID collision isolation."""
+        if self._stream_prefix:
+            return f"{self._stream_prefix}_{camera_id}_{tid}"
+        return str(tid)
+
 
     def update(
         self,
@@ -134,12 +165,11 @@ class ByteTrackTracker(Tracker):
                 info.last_bbox = bbox
                 info.lost_frame_count = 0
 
-                # Match detection_id by bbox IoU
-                matched_det_id = self._match_detection_id(
-                    tracked.xyxy[i], detections, det_ids
-                )
-                if matched_det_id:
-                    info.detection_history.append(matched_det_id)
+                # Match detection by bbox IoU
+                matched_det = self._match_detection(tracked.xyxy[i], detections)
+                if matched_det:
+                    info.class_label = matched_det.class_label
+                    info.detection_history.append(matched_det.detection_id)
                     if len(info.detection_history) > _DETECTION_HISTORY_CAP:
                         info.detection_history = info.detection_history[
                             -_DETECTION_HISTORY_CAP:
@@ -147,7 +177,7 @@ class ByteTrackTracker(Tracker):
 
                 tracks.append(
                     Track(
-                        track_id=str(tid),
+                        track_id=self._format_track_id(camera_id, tid),
                         camera_id=camera_id,
                         state=TrackState.ACTIVE,
                         bbox=bbox,
@@ -156,6 +186,7 @@ class ByteTrackTracker(Tracker):
                         last_frame_id=frame_id,
                         lost_frame_count=0,
                         detection_history=list(info.detection_history),
+                        class_label=info.class_label,
                     )
                 )
 
@@ -169,7 +200,7 @@ class ByteTrackTracker(Tracker):
                 else:
                     tracks.append(
                         Track(
-                            track_id=str(tid),
+                            track_id=self._format_track_id(camera_id, tid),
                             camera_id=camera_id,
                             state=TrackState.LOST,
                             bbox=info.last_bbox,
@@ -178,13 +209,14 @@ class ByteTrackTracker(Tracker):
                             last_frame_id=info.last_frame_id,
                             lost_frame_count=info.lost_frame_count,
                             detection_history=list(info.detection_history),
+                            class_label=info.class_label,
                         )
                     )
 
         for tid in dead_ids:
             self._log.info(
                 "track_evicted",
-                track_id=str(tid),
+                track_id=self._format_track_id(camera_id, tid),
                 state="dead",
                 lifetime_frames=(
                     self._track_info[tid].last_frame_id
@@ -197,21 +229,19 @@ class ByteTrackTracker(Tracker):
         return tracks
 
     @staticmethod
-    def _match_detection_id(
+    def _match_detection(
         tracked_xyxy: np.ndarray,
         detections: list[Detection],
-        det_ids: list[str],
-    ) -> str:
+    ) -> Detection | None:
         """Match a tracked bbox to the closest input detection by IoU."""
         if not detections:
-            return ""
+            return None
 
         best_iou = 0.0
-        best_id = ""
+        best_det: Detection | None = None
         tx1, ty1, tx2, ty2 = tracked_xyxy
 
-        for det, did in zip(detections, det_ids):
-            # Compute IoU
+        for det in detections:
             ix1 = max(tx1, det.bbox.x1)
             iy1 = max(ty1, det.bbox.y1)
             ix2 = min(tx2, det.bbox.x2)
@@ -224,9 +254,20 @@ class ByteTrackTracker(Tracker):
 
             if iou > best_iou:
                 best_iou = iou
-                best_id = did
+                best_det = det
 
-        return best_id if best_iou > 0.3 else ""
+        return best_det if best_iou > 0.3 else None
+
+    @staticmethod
+    def _match_detection_id(
+        tracked_xyxy: np.ndarray,
+        detections: list[Detection],
+        det_ids: list[str],
+    ) -> str:
+        """Match a tracked bbox to the closest input detection by IoU."""
+        det = ByteTrackTracker._match_detection(tracked_xyxy, detections)
+        return det.detection_id if det else ""
+
 
     def reset(self) -> None:
         """Reset all tracker state."""

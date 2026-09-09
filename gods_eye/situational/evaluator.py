@@ -199,6 +199,71 @@ class SituationalRiskEvaluator:
             if medium_fired:
                 firing_evidence_map["MEDIUM"].add(ev.evidence_id)
 
+        # Cross-evidence co-occurrence per subject for multi-factor rules:
+        # If CRITICAL hasn't fired yet on a single item, check if independent
+        # evidence items for the same subject jointly satisfy the CRITICAL rule
+        # (trajectory_anomaly > 3.5σ AND zone_dwell > 5.0σ AND is_restricted_zone).
+        if "CRITICAL" not in firing_rules:
+            subject_evidence: dict[str, list[Evidence]] = {}
+            for ev in valid_evidence:
+                payload = ev.payload if isinstance(ev.payload, dict) else {}
+                sub = str(payload.get("subject_ref") or ev.global_id or "")
+                if sub:
+                    if sub not in subject_evidence:
+                        subject_evidence[sub] = []
+                    subject_evidence[sub].append(ev)
+
+            for sub, sub_evs in subject_evidence.items():
+                if len(sub_evs) < 2:
+                    continue
+
+                traj_items: list[tuple[float, str]] = []
+                dwell_items: list[tuple[float, str]] = []
+                restricted_eids: list[str] = []
+
+                for ev in sub_evs:
+                    payload = ev.payload if isinstance(ev.payload, dict) else {}
+                    ts = payload.get(
+                        "trajectory_anomaly_sigma",
+                        payload.get("trajectory_sigma", payload.get("sigma", None)),
+                    )
+                    if ts is not None:
+                        traj_items.append((float(ts), ev.evidence_id))
+
+                    ds = payload.get("zone_dwell_sigma", payload.get("dwell_sigma", None))
+                    if ds is not None:
+                        dwell_items.append((float(ds), ev.evidence_id))
+
+                    rz = payload.get(
+                        "is_restricted_zone",
+                        payload.get("restricted_zone", payload.get("is_restricted", False)),
+                    )
+                    if bool(rz) is True:
+                        restricted_eids.append(ev.evidence_id)
+
+                max_traj = max((t[0] for t in traj_items), default=None)
+                max_dwell = max((d[0] for d in dwell_items), default=None)
+
+                if (
+                    max_traj is not None
+                    and max_traj > 3.5
+                    and max_dwell is not None
+                    and max_dwell > 5.0
+                    and len(restricted_eids) > 0
+                ):
+                    firing_rules.add("CRITICAL")
+                    firing_rules.add("trajectory_anomaly_gt_3.5sigma")
+                    firing_rules.add("zone_dwell_gt_5.0sigma")
+                    firing_rules.add("restricted_zone_condition")
+                    for val, eid in traj_items:
+                        if val > 3.5:
+                            firing_evidence_map["CRITICAL"].add(eid)
+                    for val, eid in dwell_items:
+                        if val > 5.0:
+                            firing_evidence_map["CRITICAL"].add(eid)
+                    for eid in restricted_eids:
+                        firing_evidence_map["CRITICAL"].add(eid)
+
         # 5. Maximum Severity Precedence
         if "CRITICAL" in firing_rules:
             risk_level = "CRITICAL"

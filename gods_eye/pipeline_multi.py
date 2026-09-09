@@ -18,7 +18,12 @@ worker classes but wires them into a fan-in topology.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
+
+if TYPE_CHECKING:
+    from gods_eye.evidence.evidence_manager import EvidenceManager
+    from gods_eye.face.live_engine import LiveFaceEngine
+    from gods_eye.face.recognizer import FaceRecognizer
 
 from gods_eye.camera_graph.camera_graph import CameraGraph
 from gods_eye.config.settings import Settings
@@ -93,6 +98,10 @@ class MultiCameraPipeline:
         on_environmental_result: Callable[[EnvironmentalResult], None] | None = None,
         event_store: BaseEventStore | None = None,
         graph_store: BaseGraphStore | None = None,
+        evidence_manager: EvidenceManager | None = None,
+        face_recognizer: FaceRecognizer | None = None,
+        live_face_engine: LiveFaceEngine | None = None,
+        enable_face_recognition: bool = True,
         metrics: MetricsRegistry | None = None,
     ) -> None:
         self._log = get_logger("pipeline.multi")
@@ -101,6 +110,55 @@ class MultiCameraPipeline:
         self._on_env_result = on_environmental_result
         self._metrics = metrics
         self._user_on_result = on_result
+
+        # ── Live Face Engine integration (§10 SIH 26187) ─────────────
+        self._live_face_engine = live_face_engine
+        if self._live_face_engine is None and enable_face_recognition:
+            try:
+                from pathlib import Path
+                from gods_eye.events.event_store import SQLiteEventStore
+                from gods_eye.evidence.evidence_manager import EvidenceManager
+                from gods_eye.face.live_engine import LiveFaceEngine
+                from gods_eye.face.recognizer import FaceRecognizer
+                from gods_eye.memory.graph_store import SQLiteGraphStore
+
+                f_rec = face_recognizer
+                if f_rec is None:
+                    det_p = Path(settings.face_detection_model_path)
+                    rec_p = Path(settings.face_recognition_model_path)
+                    if det_p.exists() and rec_p.exists():
+                        f_rec = FaceRecognizer(
+                            detection_model_path=str(det_p),
+                            recognition_model_path=str(rec_p),
+                            recognition_threshold=settings.face_recognition_threshold,
+                            detection_threshold=settings.face_detection_threshold,
+                        )
+                if f_rec is not None:
+                    ev_store = (
+                        event_store
+                        if event_store is not None
+                        else SQLiteEventStore(settings.event_store_path)
+                    )
+                    gr_store = (
+                        graph_store
+                        if graph_store is not None
+                        else SQLiteGraphStore(settings.graph_store_path)
+                    )
+                    ev_mgr = (
+                        evidence_manager
+                        if evidence_manager is not None
+                        else EvidenceManager(base_path=settings.evidence_base_path)
+                    )
+                    self._live_face_engine = LiveFaceEngine(
+                        recognizer=f_rec,
+                        graph_store=gr_store,
+                        event_store=ev_store,
+                        evidence_manager=ev_mgr,
+                        throttle_window_s=settings.face_recognition_throttle_s,
+                    )
+            except Exception as exc:
+                self._log.warning("face_engine_auto_init_failed", error=str(exc))
+                self._live_face_engine = None
 
         # ── Temporal memory integration (§14 Phase 4) ────────────────
         self._temporal_worker: TemporalWorker | None = None
@@ -128,6 +186,18 @@ class MultiCameraPipeline:
                 observations = TemporalAdapter.adapt_identity_result(result)
                 for obs in observations:
                     self._admission_control.submit(obs)
+            if self._live_face_engine is not None and result.tracking is not None:
+                try:
+                    self._live_face_engine.process_frame(
+                        frame=result.tracking.packet.frame,
+                        tracks=result.tracking.tracks,
+                        camera_id=result.tracking.packet.camera_id,
+                        frame_id=result.tracking.packet.frame_id,
+                        timestamp_ns=result.tracking.packet.timestamp_ns,
+                        identities=result.identities,
+                    )
+                except Exception as exc:
+                    self._log.error("live_face_engine_error", error=str(exc))
             self._user_on_result(result)
 
         def _combined_on_env_result(env_res: EnvironmentalResult) -> None:
@@ -351,3 +421,8 @@ class MultiCameraPipeline:
             "delivered": self._output_worker.delivered_count,
         }
         return result
+
+    @property
+    def live_face_engine(self) -> LiveFaceEngine | None:
+        """Attached LiveFaceEngine instance, or None if disabled/unavailable."""
+        return self._live_face_engine

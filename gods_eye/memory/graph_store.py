@@ -7,17 +7,44 @@ Uses SQLite WAL mode with composite key deterministic ordering (timestamp_ns, se
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import sqlite3
 import threading
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Optional
+
+import numpy as np
 
 from gods_eye.observability.logger import get_logger
 from gods_eye.observability.metrics import MetricsRegistry
 
 _log = get_logger("memory.graph_store")
+
+
+@dataclass
+class EnrolledFaceRecord:
+    """Enrolled identity face embedding record.
+
+    Attributes:
+        person_id: Unique person identifier.
+        name: Name of enrolled individual.
+        embedding: 128-d float32 L2-normalized SFace embedding vector.
+        dimension: Dimensionality of embedding (128).
+        model_version: Recognition model identifier (e.g. sface_2021dec).
+        created_ns: Enrollment timestamp in Unix nanoseconds.
+        photo_path: Local path to stored reference photo if saved.
+    """
+
+    person_id: str
+    name: str
+    embedding: np.ndarray
+    dimension: int
+    model_version: str
+    created_ns: int
+    photo_path: Optional[str] = None
 
 
 class BaseGraphStore(ABC):
@@ -136,6 +163,30 @@ class BaseGraphStore(ABC):
 
     @abstractmethod
     def count_edges(self) -> dict[str, int]:
+        ...
+
+    @abstractmethod
+    def enroll_face(
+        self,
+        person_id: str,
+        name: str,
+        embedding: np.ndarray,
+        model_version: str = "sface_2021dec",
+        photo_path: Optional[str] = None,
+        timestamp_ns: Optional[int] = None,
+    ) -> None:
+        ...
+
+    @abstractmethod
+    def get_enrolled_faces(self) -> list[EnrolledFaceRecord]:
+        ...
+
+    @abstractmethod
+    def get_enrolled_face(self, person_id: str) -> Optional[EnrolledFaceRecord]:
+        ...
+
+    @abstractmethod
+    def delete_enrolled_face(self, person_id: str) -> bool:
         ...
 
     @abstractmethod
@@ -282,6 +333,24 @@ class SQLiteGraphStore(BaseGraphStore):
             )
             self._conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_zone_occ_global_ts ON edge_zone_occupancy(global_id, timestamp_ns);"
+            )
+
+            # Enrolled faces for face recognition (Phase 10 — SIH 26187)
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS enrolled_faces (
+                    person_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    embedding BLOB NOT NULL,
+                    dimension INTEGER NOT NULL,
+                    model_version TEXT NOT NULL,
+                    photo_path TEXT,
+                    created_ns INTEGER NOT NULL
+                );
+                """
+            )
+            self._conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_enrolled_faces_created ON enrolled_faces(created_ns);"
             )
 
     def upsert_identity_node(
@@ -606,6 +675,118 @@ class SQLiteGraphStore(BaseGraphStore):
             e_trans = self._conn.execute("SELECT COUNT(*) FROM edge_transitions").fetchone()[0]
             e_occ = self._conn.execute("SELECT COUNT(*) FROM edge_zone_occupancy").fetchone()[0]
             return {"observations": e_obs, "transitions": e_trans, "zone_occupancy": e_occ}
+
+    def enroll_face(
+        self,
+        person_id: str,
+        name: str,
+        embedding: np.ndarray,
+        model_version: str = "sface_2021dec",
+        photo_path: Optional[str] = None,
+        timestamp_ns: Optional[int] = None,
+    ) -> None:
+        """Enroll a person's face embedding into canonical persistence.
+
+        Also registers/updates a subject identity node in node_identities so
+        that canonical subject lookups (/subjects/{id}) resolve this identity.
+        """
+        ts = timestamp_ns if timestamp_ns is not None else time.time_ns()
+        emb_arr = np.asarray(embedding, dtype=np.float32).flatten()
+        dim = int(emb_arr.shape[0])
+        emb_bytes = emb_arr.tobytes()
+
+        with self._lock:
+            with self._conn:
+                self._conn.execute(
+                    """
+                    INSERT INTO enrolled_faces (person_id, name, embedding, dimension, model_version, photo_path, created_ns)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(person_id) DO UPDATE SET
+                        name = excluded.name,
+                        embedding = excluded.embedding,
+                        dimension = excluded.dimension,
+                        model_version = excluded.model_version,
+                        photo_path = COALESCE(excluded.photo_path, enrolled_faces.photo_path),
+                        created_ns = excluded.created_ns;
+                    """,
+                    (person_id, name, emb_bytes, dim, model_version, photo_path, ts),
+                )
+                # Link into node_identities for /subjects/{id} resolution
+                meta_json = json.dumps({"name": name, "enrolled": True, "photo_path": photo_path})
+                self._conn.execute(
+                    """
+                    INSERT INTO node_identities (global_id, first_seen_ns, last_seen_ns, primary_camera_id, state, metadata)
+                    VALUES (?, ?, ?, 'ENROLLMENT', 'ENROLLED', ?)
+                    ON CONFLICT(global_id) DO UPDATE SET
+                        metadata = excluded.metadata,
+                        state = excluded.state;
+                    """,
+                    (person_id, ts, ts, meta_json),
+                )
+        _log.info("face_enrolled", person_id=person_id, name=name, dimension=dim)
+
+    def get_enrolled_faces(self) -> list[EnrolledFaceRecord]:
+        """Retrieve all enrolled face records."""
+        with self._lock:
+            cursor = self._conn.execute(
+                "SELECT person_id, name, embedding, dimension, model_version, photo_path, created_ns FROM enrolled_faces ORDER BY created_ns ASC;"
+            )
+            rows = cursor.fetchall()
+
+        records: list[EnrolledFaceRecord] = []
+        for r in rows:
+            emb = np.frombuffer(r["embedding"], dtype=np.float32)
+            if emb.shape[0] != r["dimension"]:
+                _log.warning(
+                    "enrolled_face_dimension_mismatch",
+                    person_id=r["person_id"],
+                    expected=r["dimension"],
+                    actual=emb.shape[0],
+                )
+            records.append(
+                EnrolledFaceRecord(
+                    person_id=r["person_id"],
+                    name=r["name"],
+                    embedding=emb,
+                    dimension=r["dimension"],
+                    model_version=r["model_version"],
+                    photo_path=r["photo_path"],
+                    created_ns=r["created_ns"],
+                )
+            )
+        return records
+
+    def get_enrolled_face(self, person_id: str) -> Optional[EnrolledFaceRecord]:
+        """Retrieve a single enrolled face record by person_id."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT person_id, name, embedding, dimension, model_version, photo_path, created_ns FROM enrolled_faces WHERE person_id = ?;",
+                (person_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        emb = np.frombuffer(row["embedding"], dtype=np.float32)
+        return EnrolledFaceRecord(
+            person_id=row["person_id"],
+            name=row["name"],
+            embedding=emb,
+            dimension=row["dimension"],
+            model_version=row["model_version"],
+            photo_path=row["photo_path"],
+            created_ns=row["created_ns"],
+        )
+
+    def delete_enrolled_face(self, person_id: str) -> bool:
+        """Delete an enrolled face by person_id."""
+        with self._lock:
+            with self._conn:
+                cur = self._conn.execute(
+                    "DELETE FROM enrolled_faces WHERE person_id = ?;", (person_id,)
+                )
+                deleted = cur.rowcount > 0
+        if deleted:
+            _log.info("face_unenrolled", person_id=person_id)
+        return deleted
 
     def close(self) -> None:
         with self._lock:

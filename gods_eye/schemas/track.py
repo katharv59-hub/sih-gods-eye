@@ -41,3 +41,5 @@ class Track:
     last_frame_id: int
     lost_frame_count: int
     detection_history: list[str] = field(default_factory=list)
+    class_label: str = "person"
+

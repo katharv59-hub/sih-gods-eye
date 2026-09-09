@@ -13,6 +13,7 @@ from typing import Optional
 
 from gods_eye.observability.logger import get_logger
 from gods_eye.schemas.camera import Zone
+from gods_eye.schemas.event import Event, EventType
 
 _log = get_logger("zones.dwell_engine")
 
@@ -152,6 +153,22 @@ class DwellEngine:
             "confidence": dwell_event.confidence,
         }
 
+    def to_event(self, dwell_event: DwellEvent, frame_id: int = 1) -> Event:
+        """Adapt a DwellEvent into a canonical Event record."""
+        return Event(
+            event_id=f"ev_dwell_{dwell_event.subject_ref}_{dwell_event.timestamp_ns}",
+            event_type=EventType.LOITERING_DETECTED,
+            global_id=dwell_event.subject_ref,
+            camera_id=dwell_event.camera_id,
+            timestamp_ns=dwell_event.timestamp_ns,
+            frame_id=frame_id,
+            confidence=dwell_event.confidence,
+            explanation=dwell_event.explanation,
+            zone_id=dwell_event.zone_id,
+            metadata=self.build_evidence_payload(dwell_event),
+        )
+
     def reset(self) -> None:
         """Clear all tracked entries."""
         self._zone_entries.clear()
+

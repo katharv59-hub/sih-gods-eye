@@ -103,6 +103,40 @@ class IdentityTransition:
     track_id: str | None = None
     previous_state: LifecycleState | None = None
 
+    def to_event(self, event_id: str | None = None) -> Any:
+        """Convert this transition signal into a canonical §4 Event record."""
+        from gods_eye.schemas.event import Event, EventType
+
+        type_map = {
+            TransitionType.CONFIRMED_NEW: EventType.IDENTITY_CONFIRMED,
+            TransitionType.CONFIRMED_RELINK: EventType.IDENTITY_CONFIRMED,
+            TransitionType.CROSS_CAMERA_TRANSITION: EventType.CROSS_CAMERA_TRANSITION,
+            TransitionType.LOST: EventType.IDENTITY_LOST,
+            TransitionType.EXPIRED: EventType.IDENTITY_PURGED,
+        }
+        evt_type = type_map.get(self.transition_type, EventType.CROSS_CAMERA_TRANSITION)
+        ev_id = event_id or f"ev_trans_{self.global_id}_{self.camera_id}_{self.timestamp_ns}"
+        explanation = (
+            f"Cross-camera transition for identity {self.global_id} to camera {self.camera_id}"
+            if self.transition_type == TransitionType.CROSS_CAMERA_TRANSITION
+            else f"Identity state change: {self.transition_type.value} for {self.global_id} on {self.camera_id}"
+        )
+        return Event(
+            event_id=ev_id,
+            event_type=evt_type,
+            global_id=self.global_id,
+            camera_id=self.camera_id,
+            timestamp_ns=self.timestamp_ns,
+            frame_id=self.frame_id,
+            confidence=self.confidence,
+            explanation=explanation,
+            metadata={
+                "transition_type": self.transition_type.value,
+                "track_id": self.track_id,
+                "previous_state": self.previous_state.value if self.previous_state else None,
+            },
+        )
+
 
 # ── Pipeline Output Type ─────────────────────────────────────────────────
 

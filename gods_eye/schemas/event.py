@@ -35,6 +35,7 @@ class EventType(Enum):
     RESTRICTED_ZONE_INTRUSION = "restricted_zone_intrusion"
     LOITERING_DETECTED = "loitering_detected"
     NIGHT_MOVEMENT = "night_movement"
+    TRAJECTORY_ANOMALY = "trajectory_anomaly"
     # Alert lifecycle events (Phase 10 — SIH 26187)
     ALERT_CREATED = "alert_created"
     ALERT_RESOLVED = "alert_resolved"

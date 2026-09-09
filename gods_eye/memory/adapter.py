@@ -71,7 +71,59 @@ class TemporalAdapter:
             )
             observations.append(obs)
 
+        for trans in getattr(res, "transitions", []):
+            if trans.transition_type.value == "cross_camera_transition":
+                ident = res.identities.get(trans.track_id) if trans.track_id else None
+                from_cam = "unknown"
+                if ident and len(ident.camera_history) >= 2:
+                    from_cam = ident.camera_history[-2]
+                obs_trans = TemporalObservation(
+                    observation_id=str(uuid.uuid4()),
+                    observation_type=TemporalObservationType.CAMERA_TRANSITION,
+                    priority=ObservationPriority.CRITICAL,
+                    timestamp_ns=trans.timestamp_ns,
+                    camera_id=trans.camera_id,
+                    global_id=trans.global_id,
+                    confidence=trans.confidence,
+                    metadata={
+                        "from_camera_id": from_cam,
+                        "track_id": trans.track_id,
+                        "frame_id": trans.frame_id,
+                        "transition_type": trans.transition_type.value,
+                    },
+                )
+                observations.append(obs_trans)
+
         return observations
+
+    @classmethod
+    def persist_identity_to_graph(
+        cls,
+        identity: Any,
+        graph_store: Any,
+        camera_id: Optional[str] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Persist an Identity node into SQLiteGraphStore."""
+        cam_id = camera_id or getattr(identity, "last_camera_id", None) or (
+            identity.camera_history[-1] if getattr(identity, "camera_history", None) else "cam-01"
+        )
+        state_str = identity.state.value if hasattr(identity.state, "value") else str(identity.state)
+        first_seen = getattr(identity, "first_seen_ns", None) or getattr(identity, "created_ns", 0)
+        last_seen = getattr(identity, "last_seen_ns", first_seen)
+        meta = metadata or {}
+        if hasattr(identity, "camera_history"):
+            meta.setdefault("camera_history", list(identity.camera_history))
+        if hasattr(identity, "confidence"):
+            meta.setdefault("confidence", identity.confidence)
+        graph_store.upsert_identity_node(
+            global_id=identity.global_id,
+            first_seen_ns=first_seen,
+            last_seen_ns=last_seen,
+            primary_camera_id=cam_id,
+            state=state_str,
+            metadata=meta,
+        )
 
     @classmethod
     def adapt_event(cls, event: Event) -> TemporalObservation:

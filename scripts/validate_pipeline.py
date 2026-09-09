@@ -125,13 +125,13 @@ def main() -> None:
         print(f"[SKIP] {TEST_VIDEO} not found")
 
     # --- Webcam test ---
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(settings.webcam_device_index)
     has_webcam = cap.isOpened()
     cap.release()
 
     if has_webcam:
         tracker2 = ByteTrackTracker(settings)
-        source2 = WebcamSource(0)
+        source2 = WebcamSource(settings.webcam_device_index)
         p2 = Pipeline(
             "webcam-test", source2, detector, tracker2, settings,
             on_result=lambda r: None,

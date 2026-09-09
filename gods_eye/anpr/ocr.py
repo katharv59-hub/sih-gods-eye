@@ -7,7 +7,7 @@ Below ANPR_MIN_CONFIDENCE → plate_text = "uncertain", still persisted, never f
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -33,6 +33,48 @@ class PlateReadingResult:
     confidence: float
     raw_text: str
     is_uncertain: bool
+
+    def to_event(
+        self,
+        camera_id: str = "cam-01",
+        timestamp_ns: int = 0,
+        frame_id: int = 1,
+        vehicle_track_id: Optional[str] = None,
+        association_confidence: Optional[float] = None,
+        event_id: Optional[str] = None,
+    ) -> Any:
+        """Adapt this OCR reading result into a canonical Event(ANPR_READING)."""
+        import uuid
+        from gods_eye.schemas.event import Event, EventType
+
+        ev_id = event_id or f"ev_anpr_{uuid.uuid4().hex[:12]}"
+        explanation = (
+            f"Plate '{self.plate_text}' read with OCR confidence {self.confidence:.2f}"
+            if not self.is_uncertain
+            else f"Uncertain plate reading '{self.plate_text}' (confidence {self.confidence:.2f} below floor)"
+        )
+        metadata: dict[str, Any] = {
+            "plate_text": self.plate_text,
+            "confidence": self.confidence,
+            "ocr_confidence": self.confidence,
+            "raw_text": self.raw_text,
+            "is_uncertain": self.is_uncertain,
+            "vehicle_track_id": vehicle_track_id,
+            "association_confidence": association_confidence,
+        }
+        return Event(
+            event_id=ev_id,
+            event_type=EventType.ANPR_READING,
+            global_id=vehicle_track_id,
+            camera_id=camera_id,
+            zone_id=None,
+            timestamp_ns=timestamp_ns,
+            frame_id=frame_id,
+            confidence=self.confidence,
+            explanation=explanation,
+            metadata=metadata,
+        )
+
 
 
 class PlateOCR:
@@ -168,3 +210,24 @@ class PlateOCR:
                 raw_text="[opencv_unavailable]",
                 is_uncertain=True,
             )
+
+    def to_event(
+        self,
+        reading: PlateReadingResult,
+        camera_id: str = "cam-01",
+        timestamp_ns: int = 0,
+        frame_id: int = 1,
+        vehicle_track_id: Optional[str] = None,
+        association_confidence: Optional[float] = None,
+        event_id: Optional[str] = None,
+    ) -> Any:
+        """Adapt a PlateReadingResult into a canonical Event(ANPR_READING)."""
+        return reading.to_event(
+            camera_id=camera_id,
+            timestamp_ns=timestamp_ns,
+            frame_id=frame_id,
+            vehicle_track_id=vehicle_track_id,
+            association_confidence=association_confidence,
+            event_id=event_id,
+        )
+

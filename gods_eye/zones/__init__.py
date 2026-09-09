@@ -9,5 +9,6 @@ Zone-based spatial intelligence engines:
 from gods_eye.zones.fence_engine import FenceEngine
 from gods_eye.zones.dwell_engine import DwellEngine
 from gods_eye.zones.night_rules import NightMovementEngine
+from gods_eye.zones.trajectory_engine import TrajectoryAnomalyEngine
 
-__all__ = ["FenceEngine", "DwellEngine", "NightMovementEngine"]
+__all__ = ["FenceEngine", "DwellEngine", "NightMovementEngine", "TrajectoryAnomalyEngine"]

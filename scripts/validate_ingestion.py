@@ -71,8 +71,10 @@ def run_validation(source_type: str) -> dict[str, object]:
 
     # Create source
     if source_type == "webcam":
-        source = WebcamSource(device_index=0)
-        camera_id = "webcam-0"
+        from gods_eye.config.settings import Settings
+        dev_idx = Settings.from_env().webcam_device_index
+        source = WebcamSource(device_index=dev_idx)
+        camera_id = f"webcam-{dev_idx}"
     else:
         source = VideoFileSource(TEST_VIDEO_PATH)
         camera_id = "file-test"

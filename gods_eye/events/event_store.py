@@ -63,6 +63,24 @@ class BaseEventStore(ABC):
         ...
 
     @abstractmethod
+    def delete_events(
+        self,
+        event_type: Optional[EventType] = None,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        """Delete events matching criteria. Returns count deleted."""
+        ...
+
+    @abstractmethod
+    def upsert(self, event: Event) -> None:
+        """Insert or replace an event by event_id.
+
+        Used for mutable records (e.g. alert lifecycle updates)
+        where the same event_id is re-persisted with updated metadata.
+        """
+        ...
+
+    @abstractmethod
     def close(self) -> None:
         """Close store resources."""
         ...
@@ -262,6 +280,81 @@ class SQLiteEventStore(BaseEventStore):
         with self._lock:
             cur = self._conn.execute("SELECT COUNT(*) FROM events")
             return cur.fetchone()[0]
+
+    def delete_events(
+        self,
+        event_type: Optional[EventType] = None,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        """Delete events matching criteria. Returns count deleted."""
+        clauses: list[str] = []
+        params: list[object] = []
+        if event_type is not None:
+            clauses.append("event_type = ?")
+            params.append(event_type.value)
+        if camera_id is not None:
+            clauses.append("camera_id = ?")
+            params.append(camera_id)
+
+        where_str = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        sql = f"DELETE FROM events {where_str}"
+        with self._lock:
+            try:
+                with self._conn:
+                    cur = self._conn.execute(sql, params)
+                    deleted_count = cur.rowcount
+                if self._metrics is not None and deleted_count > 0:
+                    self._metrics.events_purged_total.inc(deleted_count)
+                return deleted_count
+            except Exception as exc:
+                _log.error("event_store_delete_error", error=str(exc))
+                if self._metrics is not None:
+                    self._metrics.event_store_errors_total.labels(operation="delete").inc()
+                raise
+
+    def upsert(self, event: Event) -> None:
+        """Insert or replace an event by event_id.
+
+        Used for mutable records (e.g. alert lifecycle updates)
+        where the same event_id is re-persisted with updated metadata.
+        """
+        row = (
+            event.event_id,
+            event.event_type.value,
+            event.global_id,
+            event.camera_id,
+            event.zone_id,
+            event.timestamp_ns,
+            event.frame_id,
+            event.confidence,
+            event.explanation,
+            json.dumps(event.metadata),
+        )
+        with self._lock:
+            try:
+                with self._conn:
+                    self._conn.execute(
+                        """
+                        INSERT INTO events (
+                            event_id, event_type, global_id, camera_id, zone_id,
+                            timestamp_ns, frame_id, confidence, explanation, metadata
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(event_id) DO UPDATE SET
+                            event_type = excluded.event_type,
+                            global_id = excluded.global_id,
+                            camera_id = excluded.camera_id,
+                            zone_id = excluded.zone_id,
+                            timestamp_ns = excluded.timestamp_ns,
+                            frame_id = excluded.frame_id,
+                            confidence = excluded.confidence,
+                            explanation = excluded.explanation,
+                            metadata = excluded.metadata
+                        """,
+                        row,
+                    )
+            except Exception as exc:
+                _log.error("event_store_upsert_error", error=str(exc), event_id=event.event_id)
+                raise
 
     def close(self) -> None:
         with self._lock:

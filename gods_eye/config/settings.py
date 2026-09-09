@@ -103,6 +103,16 @@ class Settings:
     vehicle_detection_confidence: float = 0.30
     anpr_min_confidence: float = 0.60
 
+    # ── Camera / Ingestion ─────────────────────────────────────────────
+    webcam_device_index: int = 0
+
+    # ── Face Recognition / Phase 10 (SIH 26187) ──────────────────────
+    face_detection_model_path: str = "models/face/face_detection_yunet_2023mar.onnx"
+    face_recognition_model_path: str = "models/face/face_recognition_sface_2021dec.onnx"
+    face_recognition_threshold: float = 0.363
+    face_detection_threshold: float = 0.60
+    face_recognition_throttle_s: float = 5.0
+
     # ── Spatial Intelligence / Phase 9 (SIH 26187) ────────────────────
     night_event_min_confidence: float = 0.80
 
@@ -220,5 +230,25 @@ class Settings:
             # Graph Store
             graph_store_path=os.environ.get(
                 "GODS_EYE_GRAPH_STORE_PATH", "data/graph.db"
+            ),
+            # Camera / Ingestion
+            webcam_device_index=_env_int("GODS_EYE_WEBCAM_DEVICE_INDEX", 0),
+            # Face Recognition / Phase 10
+            face_detection_model_path=os.environ.get(
+                "GODS_EYE_FACE_DETECTION_MODEL_PATH",
+                "models/face/face_detection_yunet_2023mar.onnx",
+            ),
+            face_recognition_model_path=os.environ.get(
+                "GODS_EYE_FACE_RECOGNITION_MODEL_PATH",
+                "models/face/face_recognition_sface_2021dec.onnx",
+            ),
+            face_recognition_threshold=_env_float(
+                "GODS_EYE_FACE_RECOGNITION_THRESHOLD", 0.363
+            ),
+            face_detection_threshold=_env_float(
+                "GODS_EYE_FACE_DETECTION_THRESHOLD", 0.60
+            ),
+            face_recognition_throttle_s=_env_float(
+                "GODS_EYE_FACE_RECOGNITION_THROTTLE_S", 5.0
             ),
         )

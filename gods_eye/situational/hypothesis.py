@@ -26,6 +26,30 @@ PROHIBITED_TERMS: set[str] = {
     "unsupported causal",
 }
 
+# Canonical suspicious / Phase 9 signal types eligible for co-occurrence detection
+SUSPICIOUS_SIGNAL_TYPES: set[str] = {
+    "RESTRICTED_ZONE_INTRUSION",
+    "restricted_zone_intrusion",
+    "LOITERING_DETECTED",
+    "loitering_detected",
+    "NIGHT_MOVEMENT",
+    "night_movement",
+    "VIRTUAL_FENCE_CROSSED",
+    "virtual_fence_crossed",
+    "TRAJECTORY_ANOMALY",
+    "trajectory_anomaly",
+    "DWELL_ANOMALY",
+    "dwell_anomaly",
+}
+
+
+def _get_signal_type(ev: Evidence) -> str:
+    """Extract the raw signal or anomaly type string from an Evidence record."""
+    payload = ev.payload if isinstance(ev.payload, dict) else {}
+    raw = payload.get("anomaly_type", payload.get("event_type", ev.record_type))
+    return str(raw).strip()
+
+
 MAX_ALLOWED_DEPTH: int = 3
 MAX_ALLOWED_BRANCHING: int = 5
 MAX_NODES_PER_TREE: int = 25
@@ -268,8 +292,123 @@ class HypothesisGenerator:
             )
             trees.append(tree)
 
+        # Multi-signal co-occurrence: emit SUSPICIOUS_ACTIVITY when >= 2 independent
+        # Phase 9 / behavioral signals co-occur for the same subject within the window
+        canonical_suspicious = {s.upper() for s in SUSPICIOUS_SIGNAL_TYPES}
+        subject_suspicious_signals: dict[str, dict[str, list[Evidence]]] = {}
+
+        for ev in valid_evidence:
+            payload = ev.payload if isinstance(ev.payload, dict) else {}
+            sub = subject_ref or str(
+                payload.get("subject_ref")
+                or ev.global_id
+                or f"subject_{ev.camera_id or 'anon'}"
+            )
+            sig_raw = _get_signal_type(ev)
+            sig_canonical = sig_raw.upper()
+
+            if sig_canonical in canonical_suspicious:
+                if sub not in subject_suspicious_signals:
+                    subject_suspicious_signals[sub] = {}
+                if sig_canonical not in subject_suspicious_signals[sub]:
+                    subject_suspicious_signals[sub][sig_canonical] = []
+                subject_suspicious_signals[sub][sig_canonical].append(ev)
+
+        for sub, sig_map in sorted(subject_suspicious_signals.items()):
+            if len(sig_map) >= 2:
+                all_sub_evs = [ev for ev_list in sig_map.values() for ev in ev_list]
+                all_sub_ev_ids = tuple(sorted(list({ev.evidence_id for ev in all_sub_evs})))
+                signals_sorted = sorted(sig_map.keys())
+
+                confidences = [
+                    float(ev.payload.get("confidence", 0.75))
+                    if isinstance(ev.payload, dict)
+                    else 0.75
+                    for ev in all_sub_evs
+                ]
+                root_conf = max(confidences) if confidences else 0.75
+
+                if root_conf < effective_min_conf:
+                    continue
+
+                comp_cands = (
+                    IdentityCandidate(subject_ref=sub, confidence=0.85),
+                    IdentityCandidate(subject_ref=f"{sub}_alt", confidence=0.15),
+                )
+
+                explanation = (
+                    f"Observed co-occurrence of {len(signals_sorted)} independent signals "
+                    f"({', '.join(signals_sorted)}) involving subject reference {sub} "
+                    f"across {len(all_sub_ev_ids)} evidence item(s)."
+                )
+                explanation_lower = explanation.lower()
+                for term in PROHIBITED_TERMS:
+                    if term in explanation_lower:
+                        raise ValueError(
+                            f"Prohibited language term '{term}' detected in hypothesis explanation"
+                        )
+
+                root_hyp = Hypothesis(
+                    hypothesis_id=f"hyp_suspicious_activity_{sub}_{window_start_ns}",
+                    hypothesis_type="SUSPICIOUS_ACTIVITY",
+                    primary_subject_ref=sub,
+                    identity_confidence=0.85,
+                    competing_candidates=comp_cands,
+                    confidence=root_conf,
+                    evidence_ids=all_sub_ev_ids,
+                    explanation=explanation,
+                )
+
+                children: list[HypothesisNode] = []
+                if effective_depth > 1:
+                    for idx, sig_name in enumerate(signals_sorted[:effective_branching], start=1):
+                        sig_evs = sig_map[sig_name]
+                        sig_ev_ids = tuple(sorted(list({ev.evidence_id for ev in sig_evs})))
+                        sig_conf = max(
+                            float(ev.payload.get("confidence", root_conf * 0.9))
+                            if isinstance(ev.payload, dict)
+                            else root_conf * 0.9
+                            for ev in sig_evs
+                        )
+                        c_hyp = Hypothesis(
+                            hypothesis_id=f"hyp_suspicious_activity_{sub}_{sig_name}_{idx}",
+                            hypothesis_type=f"{sig_name}_signal",
+                            primary_subject_ref=sub,
+                            identity_confidence=0.80,
+                            competing_candidates=comp_cands,
+                            confidence=sig_conf,
+                            evidence_ids=sig_ev_ids,
+                            explanation=f"Contributing independent signal '{sig_name}' supported by {len(sig_ev_ids)} evidence item(s).",
+                        )
+                        c_node = HypothesisNode(
+                            node_id=f"node_suspicious_activity_{sub}_{sig_name}_{idx}",
+                            hypothesis=c_hyp,
+                            parent_node_id=f"node_hyp_suspicious_activity_{sub}_{window_start_ns}",
+                            children=(),
+                            depth=2,
+                        )
+                        children.append(c_node)
+
+                root_node = HypothesisNode(
+                    node_id=f"node_hyp_suspicious_activity_{sub}_{window_start_ns}",
+                    hypothesis=root_hyp,
+                    parent_node_id=None,
+                    children=tuple(children),
+                    depth=1,
+                )
+
+                tot_nodes = min(1 + len(children), MAX_NODES_PER_TREE)
+                tree = HypothesisTree(
+                    tree_id=f"tree_suspicious_activity_{sub}_{window_start_ns}",
+                    root_node=root_node,
+                    total_nodes=tot_nodes,
+                    max_depth=min(2, effective_depth) if children else 1,
+                )
+                trees.append(tree)
+
         trees.sort(
             key=lambda t: (
+                1 if t.root_node.hypothesis.hypothesis_type == "SUSPICIOUS_ACTIVITY" else 0,
                 t.root_node.hypothesis.confidence * t.root_node.hypothesis.identity_confidence,
                 t.root_node.hypothesis.confidence,
             ),

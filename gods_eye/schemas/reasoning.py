@@ -123,6 +123,42 @@ class Evidence:
             "payload": self.payload,
         }
 
+    @classmethod
+    def from_event(
+        cls,
+        event: Any,
+        evidence_id: Optional[str] = None,
+        source_store: str = "event_store",
+        extra_payload: Optional[dict[str, Any]] = None,
+    ) -> Evidence:
+        """Construct a canonical Evidence record directly from a canonical Event."""
+        payload = dict(event.metadata) if isinstance(getattr(event, "metadata", None), dict) else {}
+        if extra_payload:
+            payload.update(extra_payload)
+
+        event_type_str = (
+            event.event_type.value
+            if hasattr(event.event_type, "value")
+            else str(event.event_type)
+        )
+        if "event_type" not in payload:
+            payload["event_type"] = event_type_str
+        if "subject_ref" not in payload and getattr(event, "global_id", None):
+            payload["subject_ref"] = event.global_id
+
+        return cls(
+            evidence_id=evidence_id or f"ev_doc_{event.event_id}",
+            source_store=source_store,
+            record_type=event_type_str.upper(),
+            record_id=event.event_id,
+            timestamp_ns=event.timestamp_ns,
+            camera_id=event.camera_id,
+            global_id=event.global_id,
+            explanation=event.explanation,
+            payload=payload,
+        )
+
+
 
 @dataclass
 class ToolResult:

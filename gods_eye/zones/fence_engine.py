@@ -16,6 +16,7 @@ from typing import Optional
 from gods_eye.observability.logger import get_logger
 from gods_eye.schemas.camera import Zone
 from gods_eye.schemas.detection import BoundingBox
+from gods_eye.schemas.event import Event, EventType
 
 _log = get_logger("zones.fence_engine")
 
@@ -214,6 +215,27 @@ class FenceEngine:
             "bbox_center_y": fence_event.bbox_center[1],
         }
 
+    def to_event(self, fence_event: FenceEvent, frame_id: int = 1) -> Event:
+        """Adapt a FenceEvent into a canonical Event record."""
+        ev_type = (
+            EventType.RESTRICTED_ZONE_INTRUSION
+            if fence_event.event_type.upper() == "RESTRICTED_ZONE_INTRUSION"
+            else EventType.VIRTUAL_FENCE_CROSSED
+        )
+        return Event(
+            event_id=f"ev_fence_{fence_event.subject_ref}_{fence_event.timestamp_ns}",
+            event_type=ev_type,
+            global_id=fence_event.subject_ref,
+            camera_id=fence_event.camera_id,
+            timestamp_ns=fence_event.timestamp_ns,
+            frame_id=frame_id,
+            confidence=fence_event.confidence,
+            explanation=fence_event.explanation,
+            zone_id=fence_event.zone_id,
+            metadata=self.build_evidence_payload(fence_event),
+        )
+
     def reset(self) -> None:
         """Clear all tracked positions."""
         self._previous_positions.clear()
+

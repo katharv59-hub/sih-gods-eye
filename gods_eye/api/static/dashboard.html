@@ -508,6 +508,681 @@
       overflow-y: auto;
       white-space: pre-wrap;
     }
+
+    /* Navigation Bar Tabs */
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-tab.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(112, 0, 255, 0.2));
+      color: var(--accent);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+    }
+
+    .tab-badge {
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 2px;
+    }
+
+    /* Face Recognition Workspace Layout */
+    .face-view-container {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 24px;
+      height: calc(100vh - 64px);
+      overflow: hidden;
+      padding: 24px 28px;
+    }
+
+    .face-left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .face-left-column::-webkit-scrollbar {
+      width: 4px;
+    }
+    .face-left-column::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .file-drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-drop-zone:hover, .file-drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(0, 240, 255, 0.04);
+      box-shadow: 0 0 12px var(--accent-dim);
+    }
+
+    .preview-thumbnail {
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      box-shadow: 0 0 10px var(--accent-dim);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .preview-clear-btn {
+      position: absolute;
+      top: -8px;
+      right: calc(50% - 75px);
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px var(--danger-glow);
+    }
+
+    .feedback-banner {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      font-family: var(--font-mono);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .feedback-banner.success {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      color: var(--success);
+    }
+
+    .feedback-banner.error {
+      background: rgba(255, 51, 102, 0.1);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+      color: var(--danger);
+    }
+
+    .feedback-banner.info {
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: var(--accent);
+    }
+
+    /* Enrolled Grid */
+    .enrolled-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .enrolled-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      transition: all 0.2s;
+    }
+
+    .enrolled-card:hover {
+      border-color: var(--accent);
+      background: rgba(0, 240, 255, 0.03);
+      transform: translateX(2px);
+    }
+
+    .enrolled-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--accent);
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .enrolled-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .enrolled-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .enrolled-meta {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .enrolled-delete-btn {
+      background: rgba(255, 51, 102, 0.08);
+      border: 1px solid rgba(255, 51, 102, 0.25);
+      color: var(--danger);
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .enrolled-delete-btn:hover {
+      background: var(--danger);
+      color: #fff;
+      box-shadow: 0 0 10px var(--danger-glow);
+      transform: scale(1.08);
+    }
+
+    .clear-events-btn {
+      background: rgba(255, 51, 102, 0.1);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+      color: #ff6b8b;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .clear-events-btn:hover {
+      background: var(--danger);
+      color: #fff;
+      box-shadow: 0 0 10px var(--danger-glow);
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Face Stream Controls & Filters */
+    .stream-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .filter-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    /* Live Dot Pulse */
+    .live-dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+      animation: pulse 1.2s infinite;
+      display: inline-block;
+    }
+
+    /* Face Events List & Cards */
+    .face-events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .face-event-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(18, 24, 38, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .face-event-card:hover {
+      border-color: var(--accent);
+      background: rgba(26, 35, 54, 0.85);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .face-event-card.known {
+      border-left: 4px solid var(--success);
+    }
+
+    .face-event-card.unknown {
+      border-left: 4px solid var(--warning);
+    }
+
+    .face-card-thumb {
+      width: 68px;
+      height: 68px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #000;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .face-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .face-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .face-status-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .face-status-tag.known {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(0, 255, 136, 0.4);
+    }
+
+    .face-status-tag.unknown {
+      background: rgba(255, 170, 0, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(255, 170, 0, 0.4);
+    }
+
+    .face-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .face-card-metrics {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .metric-pill {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .face-card-inspect-btn {
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .face-event-card:hover .face-card-inspect-btn {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 0 10px var(--accent-dim);
+    }
+
+    /* Modal Backdrop & Dialog */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, 0.88);
+      backdrop-filter: blur(14px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-dialog {
+      background: #0d121d;
+      border: 1px solid var(--border-focus);
+      border-radius: 16px;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 240, 255, 0.15);
+      max-width: 1040px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-status-tag {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 4px;
+    }
+
+    .modal-subtitle {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .modal-close-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .modal-close-btn:hover {
+      background: var(--danger);
+      color: #fff;
+      border-color: var(--danger);
+      box-shadow: 0 0 10px var(--danger-glow);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    .evidence-dual-view {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+    }
+
+    .evidence-img-card {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .img-card-label {
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    .img-frame {
+      position: relative;
+      background: #05070c;
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .evidence-img {
+      max-width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .face-crop-fit {
+      max-height: 340px;
+      width: 100%;
+      object-fit: contain;
+      padding: 8px;
+    }
+
+    .img-loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .modal-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .meta-item {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .meta-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-size: 13px;
+      font-family: var(--font-mono);
+      color: #fff;
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -526,6 +1201,23 @@
       </div>
     </div>
 
+    <!-- Navigation View Switcher -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="tabBtnTactical" onclick="switchTab('tactical')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+        </svg>
+        Tactical C2
+      </button>
+      <button class="nav-tab" id="tabBtnFace" onclick="switchTab('face')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z"/>
+        </svg>
+        Face Recognition & Biometrics
+        <span class="tab-badge" id="liveFaceCountBadge">0</span>
+      </button>
+    </nav>
+
     <div class="sys-status-bar">
       <div class="status-badge">
         <div class="status-dot"></div>
@@ -535,7 +1227,7 @@
   </header>
 
   <!-- 3-Column Tactical Layout -->
-  <main class="dashboard-container">
+  <main class="dashboard-container" id="tacticalView">
 
     <!-- Column 1: Active Threat Signals & Alerts -->
     <section class="panel">
@@ -725,7 +1417,644 @@
 
   </main>
 
+  <!-- Face Recognition & Biometrics Workspace -->
+  <main class="face-view-container" id="faceView" style="display: none;">
+    <!-- Column 1: Enrollment & Gallery -->
+    <div class="face-left-column">
+      
+      <!-- Enrollment Card -->
+      <section class="panel enrollment-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            Face Enrollment
+          </div>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent);">YuNet + SFace</span>
+        </div>
+        <div class="panel-content">
+          <form id="enrollForm" onsubmit="handleEnrollSubmit(event)">
+            <div class="form-group">
+              <label for="enrollName" class="form-label">Full Name / Subject Label</label>
+              <input type="text" id="enrollName" class="console-input" placeholder="e.g. Atharva" required autocomplete="off" />
+            </div>
+
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">Reference Photograph (1 Face Required)</label>
+              <div class="file-drop-zone" id="fileDropZone" onclick="document.getElementById('enrollFileInput').click()">
+                <input type="file" id="enrollFileInput" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleFileSelected(event)" />
+                <div id="dropZonePrompt">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--accent); margin-bottom: 6px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <div style="font-size: 12px; font-weight: 600;">Click or Drag & Drop Image</div>
+                  <div style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;">JPG, PNG up to 10MB</div>
+                </div>
+                <div id="dropZonePreview" style="display: none; position: relative;">
+                  <img id="previewImg" src="" alt="Preview" class="preview-thumbnail" />
+                  <button type="button" class="preview-clear-btn" onclick="clearSelectedFile(event)">✕</button>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="enrollBtn" class="console-btn" style="width: 100%; margin-top: 16px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <span id="enrollBtnText">Enroll Person</span>
+              <span id="enrollSpinner" class="spinner" style="display: none;"></span>
+            </button>
+          </form>
+
+          <!-- Status & Feedback Banner -->
+          <div id="enrollFeedback" class="feedback-banner" style="display: none;"></div>
+        </div>
+      </section>
+
+      <!-- Enrolled Gallery Card -->
+      <section class="panel gallery-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+            Enrolled Identities (<span id="enrolledCount">0</span>)
+          </div>
+          <button class="icon-btn" onclick="loadEnrolledFaces()" title="Refresh Gallery">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="panel-content" id="enrolledListContainer">
+          <div id="enrolledGrid" class="enrolled-grid">
+            <!-- Dynamically populated enrolled cards -->
+          </div>
+          <div id="enrolledEmptyState" class="empty-state" style="display: none;">
+            No people enrolled yet. Use the form above to enroll a face.
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Column 2: Live Face Events Stream -->
+    <section class="panel face-events-panel">
+      <div class="panel-header">
+        <div class="panel-title" style="gap: 10px;">
+          <span class="live-dot-pulse"></span>
+          Live Face Event Stream (YuNet + SFace)
+        </div>
+        <div class="stream-controls">
+          <div class="filter-group">
+            <button class="filter-btn active" onclick="setFaceFilter('all', this)">All</button>
+            <button class="filter-btn" onclick="setFaceFilter('KNOWN', this)">Known</button>
+            <button class="filter-btn" onclick="setFaceFilter('UNKNOWN', this)">Unknown</button>
+          </div>
+          <button class="clear-events-btn" onclick="clearAllFaceEvents()" title="Clear All Event Records From Database">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+            Clear Records
+          </button>
+        </div>
+      </div>
+      <div class="panel-content" style="padding: 12px 16px;">
+        <div id="faceEventsList" class="face-events-list">
+          <!-- Dynamically populated live face cards -->
+        </div>
+        <div id="faceEventsEmptyState" class="empty-state">
+          <div style="font-size: 24px; margin-bottom: 8px;">📡</div>
+          Monitoring live camera feed for faces...
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 6px;">
+            Run <code>python run_demo.py</code> to stream frames into the AI pipeline.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Biometric Evidence Inspection Modal -->
+  <div id="evidenceModal" class="modal-backdrop" style="display: none;" onclick="handleModalBackdropClick(event)">
+    <div class="modal-dialog" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-title">
+            <span id="modalStatusBadge" class="modal-status-tag known">KNOWN</span>
+            Biometric Evidence Inspection
+          </div>
+          <div class="modal-subtitle" id="modalSubtitle">Event ID: -- • Timestamp: --</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeEvidenceModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Dual Image Evidence View -->
+        <div class="evidence-dual-view">
+          <!-- Left: Tight Face Crop -->
+          <div class="evidence-img-card">
+            <div class="img-card-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+              </svg>
+              Tight Zoomed Face Crop (SFace Recognition Crop)
+            </div>
+            <div class="img-frame">
+              <img id="modalFaceCropImg" src="" alt="Face Crop" class="evidence-img face-crop-fit" />
+            </div>
+          </div>
+
+          <!-- Right: Full CCTV Snapshot -->
+          <div class="evidence-img-card">
+            <div class="img-card-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+              </svg>
+              Full CCTV Camera Frame Snapshot
+            </div>
+            <div class="img-frame">
+              <img id="modalSnapshotImg" src="" alt="Full Snapshot" class="evidence-img" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidence Metadata Grid -->
+        <div class="modal-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Identity Status</span>
+            <span class="meta-value" id="modalMetaStatus">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Person Name</span>
+            <span class="meta-value" id="modalMetaName">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Cosine Similarity</span>
+            <span class="meta-value" id="modalMetaSim">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Detection Confidence</span>
+            <span class="meta-value" id="modalMetaConf">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Camera</span>
+            <span class="meta-value" id="modalMetaCam">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Track ID</span>
+            <span class="meta-value" id="modalMetaTrack">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Person / Subject ID</span>
+            <span class="meta-value" id="modalMetaPid">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Evidence Directory ID</span>
+            <span class="meta-value" id="modalMetaEvId">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Tab switching
+    function switchTab(tab) {
+      const tabBtnTactical = document.getElementById('tabBtnTactical');
+      const tabBtnFace = document.getElementById('tabBtnFace');
+      const tacticalView = document.getElementById('tacticalView');
+      const faceView = document.getElementById('faceView');
+
+      if (tab === 'tactical') {
+        tabBtnTactical.classList.add('active');
+        tabBtnFace.classList.remove('active');
+        tacticalView.style.display = 'grid';
+        faceView.style.display = 'none';
+      } else if (tab === 'face') {
+        tabBtnFace.classList.add('active');
+        tabBtnTactical.classList.remove('active');
+        faceView.style.display = 'grid';
+        tacticalView.style.display = 'none';
+        loadEnrolledFaces();
+      }
+    }
+
+    // File Selection & Preview for Enrollment
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('dropZonePrompt').style.display = 'none';
+        document.getElementById('dropZonePreview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearSelectedFile(event) {
+      if (event) event.stopPropagation();
+      const input = document.getElementById('enrollFileInput');
+      input.value = '';
+      document.getElementById('previewImg').src = '';
+      document.getElementById('dropZonePreview').style.display = 'none';
+      document.getElementById('dropZonePrompt').style.display = 'block';
+    }
+
+    // Drag and drop support
+    const dropZone = document.getElementById('fileDropZone');
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      }, false);
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      }, false);
+    });
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        document.getElementById('enrollFileInput').files = files;
+        handleFileSelected({ target: { files: files } });
+      }
+    });
+
+    // Face Enrollment Submission
+    async function handleEnrollSubmit(event) {
+      event.preventDefault();
+      const nameInput = document.getElementById('enrollName');
+      const fileInput = document.getElementById('enrollFileInput');
+      const feedback = document.getElementById('enrollFeedback');
+      const submitBtn = document.getElementById('enrollBtn');
+      const btnText = document.getElementById('enrollBtnText');
+      const spinner = document.getElementById('enrollSpinner');
+
+      const name = nameInput.value.trim();
+      const file = fileInput.files[0];
+
+      if (!name) {
+        feedback.className = 'feedback-banner error';
+        feedback.textContent = 'Please enter a valid person name.';
+        feedback.style.display = 'block';
+        return;
+      }
+      if (!file) {
+        feedback.className = 'feedback-banner error';
+        feedback.textContent = 'Please select a reference photo containing exactly one face.';
+        feedback.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnText.textContent = 'Enrolling Face...';
+      spinner.style.display = 'inline-block';
+      feedback.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/faces/enroll', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (res.ok && res.status === 201) {
+          feedback.className = 'feedback-banner success';
+          feedback.textContent = `✓ Successfully enrolled "${data.name}"! Person ID: ${data.person_id} (${data.dimension}D SFace embedding).`;
+          feedback.style.display = 'block';
+          nameInput.value = '';
+          clearSelectedFile();
+          loadEnrolledFaces();
+        } else {
+          feedback.className = 'feedback-banner error';
+          feedback.textContent = `✗ Enrollment failed: ${data.detail || 'Unknown error occurred.'}`;
+          feedback.style.display = 'block';
+        }
+      } catch (err) {
+        feedback.className = 'feedback-banner error';
+        feedback.textContent = `✗ Connection error: ${err.message}`;
+        feedback.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        btnText.textContent = 'Enroll Person';
+        spinner.style.display = 'none';
+      }
+    }
+
+    // Load Enrolled Faces Gallery
+    async function loadEnrolledFaces() {
+      const grid = document.getElementById('enrolledGrid');
+      const countBadge = document.getElementById('enrolledCount');
+      const emptyState = document.getElementById('enrolledEmptyState');
+
+      try {
+        const res = await fetch('/faces/enrolled');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const list = data.enrolled || [];
+
+        countBadge.textContent = list.length;
+        if (list.length === 0) {
+          grid.innerHTML = '';
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        grid.innerHTML = list.map(item => {
+          const dateStr = item.created_ns ? new Date(item.created_ns / 1000000).toLocaleString() : 'Enrolled';
+          const photoUrl = item.photo_url || `/faces/photo/${item.person_id}`;
+          return `
+            <div class="enrolled-card">
+              <img src="${photoUrl}" alt="${escapeHtml(item.name)}" class="enrolled-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'44\\' height=\\'44\\' fill=\\'%23555\\'><rect width=\\'44\\' height=\\'44\\'/><text x=\\'50%\\' y=\\'55%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23888\\' font-size=\\'12\\'>FACE</text></svg>'" />
+              <div class="enrolled-details">
+                <div class="enrolled-name">${escapeHtml(item.name)}</div>
+                <div class="enrolled-meta">ID: ${escapeHtml(item.person_id)}</div>
+                <div class="enrolled-meta" style="color: var(--text-dim);">${dateStr}</div>
+              </div>
+              <button class="enrolled-delete-btn" onclick="deleteEnrolledPerson('${escapeHtml(item.person_id)}', '${escapeHtml(item.name)}', event)" title="Delete Enrollment">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.warn('Failed to load enrolled faces:', err);
+      }
+    }
+
+    // Delete an enrolled person
+    async function deleteEnrolledPerson(personId, name, event) {
+      if (event) event.stopPropagation();
+      if (!confirm(`Are you sure you want to delete "${name}" (${personId}) from enrolled faces?`)) return;
+
+      const feedback = document.getElementById('enrollFeedback');
+      try {
+        const res = await fetch(`/faces/enrolled/${encodeURIComponent(personId)}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (res.ok) {
+          feedback.className = 'feedback-banner success';
+          feedback.textContent = `✓ Deleted enrolled person "${name}" (${personId}).`;
+          feedback.style.display = 'block';
+          loadEnrolledFaces();
+        } else {
+          feedback.className = 'feedback-banner error';
+          feedback.textContent = `✗ Failed to delete: ${data.detail || 'Unknown error'}`;
+          feedback.style.display = 'block';
+        }
+      } catch (err) {
+        feedback.className = 'feedback-banner error';
+        feedback.textContent = `✗ Connection error: ${err.message}`;
+        feedback.style.display = 'block';
+      }
+    }
+
+    // Clear all face events from database and list
+    async function clearAllFaceEvents() {
+      if (!confirm('Clear all face detection event records from the database?')) return;
+      try {
+        const res = await fetch('/events?event_type=face_detected', { method: 'DELETE' });
+        if (res.ok) {
+          seenFaceEventIds.clear();
+          storedFaceEvents = [];
+          document.getElementById('liveFaceCountBadge').textContent = '0';
+          renderFaceEventsList();
+        }
+      } catch (err) {
+        console.error('Failed to clear events:', err);
+      }
+    }
+
+    // Live Face Event Stream & Polling
+    let seenFaceEventIds = new Set();
+    let currentFaceFilter = 'all';
+    let isPollingFaces = false;
+    let storedFaceEvents = [];
+
+    function setFaceFilter(filter, btn) {
+      currentFaceFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderFaceEventsList();
+    }
+
+    function clearFaceEventsList() {
+      seenFaceEventIds.clear();
+      storedFaceEvents = [];
+      renderFaceEventsList();
+    }
+
+    async function pollFaceEvents() {
+      if (isPollingFaces) return;
+      isPollingFaces = true;
+
+      try {
+        const res = await fetch('/events?event_type=face_detected&limit=25');
+        if (!res.ok) return;
+        const data = await res.json();
+        const events = data.events || [];
+
+        let newEventsAdded = false;
+        for (const ev of events) {
+          if (!seenFaceEventIds.has(ev.event_id)) {
+            seenFaceEventIds.add(ev.event_id);
+            storedFaceEvents.unshift(ev);
+            newEventsAdded = true;
+          }
+        }
+
+        // Bound memory & DOM growth
+        if (storedFaceEvents.length > 40) {
+          storedFaceEvents = storedFaceEvents.slice(0, 40);
+        }
+
+        document.getElementById('liveFaceCountBadge').textContent = storedFaceEvents.length;
+
+        if (newEventsAdded) {
+          renderFaceEventsList();
+        }
+      } catch (err) {
+        console.warn('Face event polling error:', err);
+      } finally {
+        isPollingFaces = false;
+      }
+    }
+
+    function renderFaceEventsList() {
+      const listElem = document.getElementById('faceEventsList');
+      const emptyState = document.getElementById('faceEventsEmptyState');
+
+      const filtered = storedFaceEvents.filter(ev => {
+        const status = (ev.metadata && ev.metadata.status) ? ev.metadata.status : 'UNKNOWN';
+        if (currentFaceFilter === 'KNOWN') return status === 'KNOWN';
+        if (currentFaceFilter === 'UNKNOWN') return status === 'UNKNOWN';
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        listElem.innerHTML = '';
+        emptyState.style.display = 'flex';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      listElem.innerHTML = filtered.map(ev => {
+        const md = ev.metadata || {};
+        const isKnown = md.status === 'KNOWN';
+        const statusClass = isKnown ? 'known' : 'unknown';
+        const statusLabel = isKnown ? 'KNOWN' : 'UNKNOWN / UNVERIFIED';
+        // Strictly never invent a name for unknown
+        const displayName = isKnown ? (md.name || 'Enrolled Person') : 'UNKNOWN / UNVERIFIED';
+
+        const alertId = ev.event_id;
+        const evId = md.evidence_id || ev.event_id;
+        const cropUrl = `/evidence/file/${encodeURIComponent(alertId)}/${encodeURIComponent(evId)}/face_crop.jpg`;
+
+        const simScore = md.similarity !== undefined ? (Number(md.similarity) * 100).toFixed(1) + '%' : 'N/A';
+        const confScore = (md.detection_confidence || ev.confidence) ? (Number(md.detection_confidence || ev.confidence) * 100).toFixed(1) + '%' : 'N/A';
+        const cam = ev.camera_id || 'webcam';
+        const track = md.track_id ? `Track #${md.track_id}` : 'Track --';
+        const timeStr = formatTimestamp(ev.timestamp_ns);
+
+        const evPayload = encodeURIComponent(JSON.stringify(ev));
+
+        return `
+          <div class="face-event-card ${statusClass}" onclick="openEvidenceModalFromPayload('${evPayload}')">
+            <img src="${cropUrl}" alt="Tight Face Crop" class="face-card-thumb" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'68\\' height=\\'68\\' fill=\\'%23111\\'><rect width=\\'68\\' height=\\'68\\'/><text x=\\'50%\\' y=\\'55%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23666\\' font-size=\\'10\\'>CROP</text></svg>'" />
+            <div class="face-card-body">
+              <div class="face-card-header">
+                <span class="face-status-tag ${statusClass}">${statusLabel}</span>
+                <div class="face-card-name">${escapeHtml(displayName)}</div>
+              </div>
+              <div class="face-card-metrics">
+                <div>Similarity: <span class="metric-pill">${simScore}</span></div>
+                <div>Confidence: <span class="metric-pill">${confScore}</span></div>
+                <div>${escapeHtml(cam)}</div>
+                <div>${escapeHtml(track)}</div>
+                <div style="color: var(--text-dim);">${timeStr}</div>
+              </div>
+            </div>
+            <button class="face-card-inspect-btn">Inspect Evidence ↗</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Evidence Modal Logic
+    function openEvidenceModalFromPayload(encodedPayload) {
+      try {
+        const ev = JSON.parse(decodeURIComponent(encodedPayload));
+        openEvidenceModal(ev);
+      } catch (e) {
+        console.error('Failed to parse event payload', e);
+      }
+    }
+
+    function openEvidenceModal(ev) {
+      const modal = document.getElementById('evidenceModal');
+      const md = ev.metadata || {};
+      const isKnown = md.status === 'KNOWN';
+
+      // Status badge
+      const badge = document.getElementById('modalStatusBadge');
+      badge.textContent = isKnown ? 'KNOWN' : 'UNKNOWN / UNVERIFIED';
+      badge.className = `modal-status-tag ${isKnown ? 'known' : 'unknown'}`;
+
+      // Title & Subtitle
+      document.getElementById('modalSubtitle').textContent = `Event ID: ${ev.event_id} • Timestamp: ${formatTimestamp(ev.timestamp_ns, true)}`;
+
+      // Images
+      const alertId = ev.event_id;
+      const evId = md.evidence_id || ev.event_id;
+      const cropUrl = `/evidence/file/${encodeURIComponent(alertId)}/${encodeURIComponent(evId)}/face_crop.jpg`;
+      const snapshotUrl = `/evidence/file/${encodeURIComponent(alertId)}/${encodeURIComponent(evId)}/snapshot.jpg`;
+
+      const cropImg = document.getElementById('modalFaceCropImg');
+      const snapshotImg = document.getElementById('modalSnapshotImg');
+
+      cropImg.src = cropUrl;
+      snapshotImg.src = snapshotUrl;
+
+      // Metadata items
+      document.getElementById('modalMetaStatus').textContent = isKnown ? 'KNOWN (MATCHED)' : 'UNKNOWN / UNVERIFIED';
+      document.getElementById('modalMetaStatus').style.color = isKnown ? 'var(--success)' : 'var(--warning)';
+      // Strictly never invent a name
+      document.getElementById('modalMetaName').textContent = isKnown ? (md.name || 'N/A') : 'UNKNOWN / UNVERIFIED';
+      document.getElementById('modalMetaSim').textContent = md.similarity !== undefined ? `${(Number(md.similarity) * 100).toFixed(2)}%` : 'N/A';
+      document.getElementById('modalMetaConf').textContent = (md.detection_confidence || ev.confidence) ? `${(Number(md.detection_confidence || ev.confidence) * 100).toFixed(2)}%` : 'N/A';
+      document.getElementById('modalMetaCam').textContent = ev.camera_id || 'webcam';
+      document.getElementById('modalMetaTrack').textContent = md.track_id ? `#${md.track_id}` : 'N/A';
+      document.getElementById('modalMetaPid').textContent = md.person_id || ev.global_id || 'N/A';
+      document.getElementById('modalMetaEvId').textContent = evId || 'N/A';
+
+      modal.style.display = 'flex';
+    }
+
+    function closeEvidenceModal() {
+      document.getElementById('evidenceModal').style.display = 'none';
+      document.getElementById('modalFaceCropImg').src = '';
+      document.getElementById('modalSnapshotImg').src = '';
+    }
+
+    function handleModalBackdropClick(event) {
+      if (event.target.id === 'evidenceModal') {
+        closeEvidenceModal();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeEvidenceModal();
+      }
+    });
+
+    // Utility Helpers
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatTimestamp(ts_ns, full = false) {
+      if (!ts_ns) return 'Just now';
+      const ms = Number(ts_ns) / 1000000;
+      const d = new Date(ms);
+      if (full) return d.toISOString();
+      const diffSec = Math.floor((Date.now() - ms) / 1000);
+      if (diffSec < 5) return 'Just now';
+      if (diffSec < 60) return `${diffSec}s ago`;
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+      return d.toLocaleTimeString();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadEnrolledFaces();
+      pollFaceEvents();
+      // Periodic face event polling (2.0s bounded cycle)
+      setInterval(pollFaceEvents, 2000);
+    });
+
     function setQuery(q) {
       document.getElementById('queryInput').value = q;
       runInvestigation();

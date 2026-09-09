@@ -46,15 +46,17 @@ class EvidenceManager:
         timestamp_ns: int,
         frame: Optional[np.ndarray] = None,
         metadata: Optional[dict[str, Any]] = None,
+        face_crop: Optional[np.ndarray] = None,
     ) -> str:
-        """Capture evidence for an alert event.
+        """Capture evidence for an alert or event.
 
         Args:
-            alert_id: Alert this evidence is linked to.
+            alert_id: Alert or event identifier this evidence is linked to.
             camera_id: Source camera.
             timestamp_ns: Capture timestamp.
             frame: BGR frame to capture as snapshot.
             metadata: Additional metadata for the evidence record.
+            face_crop: Cropped face BGR image to save as face_crop.jpg.
 
         Returns:
             Evidence directory path.
@@ -71,13 +73,10 @@ class EvidenceManager:
             "timestamp_ns": timestamp_ns,
             "captured_at": time.time_ns(),
             "has_snapshot": frame is not None,
+            "has_face_crop": face_crop is not None,
         }
         if metadata:
             meta.update(metadata)
-
-        meta_path = evidence_dir / "metadata.json"
-        with open(meta_path, "w") as f:
-            json.dump(meta, f, indent=2)
 
         # Write snapshot
         if frame is not None:
@@ -94,6 +93,26 @@ class EvidenceManager:
                 )
             except ImportError:
                 _log.warning("opencv_not_available", msg="Cannot save snapshot")
+
+        # Write face crop
+        if face_crop is not None:
+            try:
+                import cv2  # type: ignore[import-untyped]
+
+                crop_path = evidence_dir / "face_crop.jpg"
+                cv2.imwrite(str(crop_path), face_crop)
+                meta["face_crop_path"] = str(crop_path)
+                _log.info(
+                    "evidence_face_crop_captured",
+                    evidence_id=evidence_id,
+                    alert_id=alert_id,
+                )
+            except ImportError:
+                _log.warning("opencv_not_available", msg="Cannot save face crop")
+
+        meta_path = evidence_dir / "metadata.json"
+        with open(meta_path, "w") as f:
+            json.dump(meta, f, indent=2)
 
         return str(evidence_dir)
 

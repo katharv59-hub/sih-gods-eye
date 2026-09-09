@@ -11,9 +11,10 @@ import threading
 import time
 from typing import Optional
 
-from gods_eye.alerts.alert_store import SQLiteAlertStore
+from gods_eye.alerts.alert_store import AlertStore
 from gods_eye.observability.logger import get_logger
 from gods_eye.schemas.alert import Alert
+
 
 _log = get_logger("alerts.alert_writer")
 
@@ -22,12 +23,12 @@ class AlertWriter:
     """Thread-safe async batch writer for Alert objects.
 
     Mirrors EventWriter pattern: background thread drains a queue
-    and flushes batches to SQLiteAlertStore.
+    and flushes batches to AlertStore.
     """
 
     def __init__(
         self,
-        store: SQLiteAlertStore,
+        store: AlertStore,
         batch_size: int = 50,
         flush_interval_s: float = 0.5,
         max_queue_size: int = 5_000,

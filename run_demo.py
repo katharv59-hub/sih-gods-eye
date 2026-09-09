@@ -186,8 +186,8 @@ def main() -> None:
         source_name = os.path.basename(video_path)
         camera_id = "file"
     else:
-        source = WebcamSource(0)
-        source_name = "Webcam"
+        source = WebcamSource(settings.webcam_device_index)
+        source_name = f"Webcam (index {settings.webcam_device_index})"
         camera_id = "webcam"
 
     # Init

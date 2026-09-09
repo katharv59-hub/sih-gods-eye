@@ -33,6 +33,11 @@ from gods_eye.schemas.track import Track
 from gods_eye.tracking.tracker import Tracker
 
 if TYPE_CHECKING:
+    from gods_eye.events.event_store import BaseEventStore
+    from gods_eye.evidence.evidence_manager import EvidenceManager
+    from gods_eye.face.live_engine import LiveFaceEngine
+    from gods_eye.face.recognizer import FaceRecognizer
+    from gods_eye.memory.graph_store import BaseGraphStore
     from gods_eye.reid.identity_mapper import IdentityMapper, IdentityResult
 
 # ─── Pipeline Data Types ─────────────────────────────────────────────────────
@@ -301,15 +306,18 @@ class IdentityWorker(threading.Thread):
     def __init__(
         self,
         camera_id: str,
-        mapper: IdentityMapper | None,
-        input_queue: PipelineQueue[TrackingResult],
-        output_queue: PipelineQueue[IdentityResult],
+        mapper: IdentityMapper | None = None,
+        input_queue: PipelineQueue[TrackingResult] | None = None,
+        output_queue: PipelineQueue[IdentityResult] | None = None,
         *,
+        identity_mapper: IdentityMapper | None = None,
         metrics: MetricsRegistry | None = None,
     ) -> None:
         super().__init__(daemon=True, name=f"identity-{camera_id}")
         self._camera_id = camera_id
-        self._mapper = mapper
+        self._mapper = mapper if mapper is not None else identity_mapper
+        if input_queue is None or output_queue is None:
+            raise ValueError("input_queue and output_queue are required")
         self._input = input_queue
         self._output = output_queue
         self._metrics = metrics
@@ -430,9 +438,64 @@ class Pipeline:
         *,
         identity_mapper: IdentityMapper | None = None,
         metrics: MetricsRegistry | None = None,
+        live_face_engine: LiveFaceEngine | None = None,
+        enable_face_recognition: bool = True,
+        event_store: BaseEventStore | None = None,
+        graph_store: BaseGraphStore | None = None,
+        evidence_manager: EvidenceManager | None = None,
+        face_recognizer: FaceRecognizer | None = None,
     ) -> None:
         self._camera_id = camera_id
         self._log = get_logger("pipeline", camera_id)
+
+        # ── Live Face Engine Integration (§10 SIH 26187) ──────────────
+        self._live_face_engine = live_face_engine
+        if self._live_face_engine is None and enable_face_recognition:
+            try:
+                from pathlib import Path
+                from gods_eye.events.event_store import SQLiteEventStore
+                from gods_eye.evidence.evidence_manager import EvidenceManager
+                from gods_eye.face.live_engine import LiveFaceEngine
+                from gods_eye.face.recognizer import FaceRecognizer
+                from gods_eye.memory.graph_store import SQLiteGraphStore
+
+                f_rec = face_recognizer
+                if f_rec is None:
+                    det_p = Path(settings.face_detection_model_path)
+                    rec_p = Path(settings.face_recognition_model_path)
+                    if det_p.exists() and rec_p.exists():
+                        f_rec = FaceRecognizer(
+                            detection_model_path=str(det_p),
+                            recognition_model_path=str(rec_p),
+                            recognition_threshold=settings.face_recognition_threshold,
+                            detection_threshold=settings.face_detection_threshold,
+                        )
+                if f_rec is not None:
+                    ev_store = (
+                        event_store
+                        if event_store is not None
+                        else SQLiteEventStore(settings.event_store_path)
+                    )
+                    gr_store = (
+                        graph_store
+                        if graph_store is not None
+                        else SQLiteGraphStore(settings.graph_store_path)
+                    )
+                    ev_mgr = (
+                        evidence_manager
+                        if evidence_manager is not None
+                        else EvidenceManager(base_path=settings.evidence_base_path)
+                    )
+                    self._live_face_engine = LiveFaceEngine(
+                        recognizer=f_rec,
+                        graph_store=gr_store,
+                        event_store=ev_store,
+                        evidence_manager=ev_mgr,
+                        throttle_window_s=settings.face_recognition_throttle_s,
+                    )
+            except Exception as exc:
+                self._log.warning("face_engine_auto_init_failed", error=str(exc))
+                self._live_face_engine = None
 
         # Queues (§8)
         self._frame_q = FrameQueue(
@@ -474,7 +537,23 @@ class Pipeline:
             camera_id, identity_mapper, self._track_q, self._identity_q,
             metrics=metrics,
         )
-        self._output = OutputWorker(camera_id, self._identity_q, on_result)
+
+        def _pipeline_on_result(res: IdentityResult) -> None:
+            if self._live_face_engine is not None and res.tracking is not None:
+                try:
+                    self._live_face_engine.process_frame(
+                        frame=res.tracking.packet.frame,
+                        tracks=res.tracking.tracks,
+                        camera_id=self._camera_id,
+                        frame_id=res.tracking.packet.frame_id,
+                        timestamp_ns=res.tracking.packet.timestamp_ns,
+                        identities=res.identities,
+                    )
+                except Exception as exc:
+                    self._log.error("live_face_engine_error", error=str(exc))
+            on_result(res)
+
+        self._output = OutputWorker(camera_id, self._identity_q, _pipeline_on_result)
 
     def start(self) -> None:
         """Start all pipeline threads."""
@@ -526,3 +605,8 @@ class Pipeline:
             "identified": self._identity.processed_count,
             "delivered": self._output.delivered_count,
         }
+
+    @property
+    def live_face_engine(self) -> LiveFaceEngine | None:
+        """Attached LiveFaceEngine instance, or None if disabled/unavailable."""
+        return self._live_face_engine

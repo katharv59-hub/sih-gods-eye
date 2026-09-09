@@ -170,6 +170,11 @@ class WebcamSource(FrameSource):
         return self._fps
 
     @property
+    def device_index(self) -> int:
+        """Device capture index."""
+        return self._device_index
+
+    @property
     def source_type(self) -> str:
         return "webcam"
 
