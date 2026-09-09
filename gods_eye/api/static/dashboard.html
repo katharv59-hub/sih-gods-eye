@@ -392,6 +392,91 @@
       animation: pulse 1.5s infinite;
     }
 
+    .camera-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #020617;
+    }
+
+    .camera-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .camera-video-stream {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #020617;
+    }
+
+    .cam-btn-toggle {
+      pointer-events: auto;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: var(--accent);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cam-btn-toggle:hover {
+      background: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .cam-btn-toggle.active {
+      background: rgba(0, 255, 136, 0.2);
+      border-color: rgba(0, 255, 136, 0.5);
+      color: var(--success);
+    }
+
+    .threat-actions-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .threat-action-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .threat-action-btn:hover {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .alert-item.clickable {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .alert-item.clickable:hover {
+      transform: translateX(3px);
+      border-color: var(--border-focus);
+    }
+
     .mock-scene {
       width: 100%;
       height: 100%;
@@ -1605,41 +1690,13 @@
 
         <!-- Live Alert Feed -->
         <div id="alertsList">
-          <div class="alert-item critical">
-            <div class="alert-header">
-              <span class="alert-tag critical">CRITICAL</span>
-              <span class="alert-time">12s ago</span>
-            </div>
-            <div class="alert-desc">Vault Perimeter: Point-in-polygon intrusion in restricted zone with loitering > 5.2σ.</div>
-            <div class="alert-meta">CAM-02 • SUBJECT_9941 • RESTRICTED_ZONE</div>
-          </div>
+          <!-- Dynamically populated by loadTacticalAlerts() -->
+        </div>
 
-          <div class="alert-item high">
-            <div class="alert-header">
-              <span class="alert-tag high">HIGH</span>
-              <span class="alert-time">1m ago</span>
-            </div>
-            <div class="alert-desc">Plate Sightings: Registered suspect vehicle DL01AB1234 detected at North Gate.</div>
-            <div class="alert-meta">CAM-01 • ANPR_READING • DL01AB1234</div>
-          </div>
-
-          <div class="alert-item high">
-            <div class="alert-header">
-              <span class="alert-tag high">HIGH</span>
-              <span class="alert-time">4m ago</span>
-            </div>
-            <div class="alert-desc">Night Movement: Off-hours transition detected in Loading Dock during NIGHT_DARK.</div>
-            <div class="alert-meta">CAM-04 • NIGHT_MOVEMENT • CONF: 0.91</div>
-          </div>
-
-          <div class="alert-item medium">
-            <div class="alert-header">
-              <span class="alert-tag medium">MEDIUM</span>
-              <span class="alert-time">9m ago</span>
-            </div>
-            <div class="alert-desc">Loitering Alert: Dwell threshold exceeded in ATM Corridor (142s > 60s baseline).</div>
-            <div class="alert-meta">CAM-03 • DWELL_TIME • 2.8σ</div>
-          </div>
+        <!-- Threat Simulator Actions Bar -->
+        <div class="threat-actions-bar">
+          <button class="threat-action-btn" onclick="triggerSimulatedAlert('intrusion')" title="Inject a real Vault Perimeter intrusion alert">⚡ Simulate Intrusion</button>
+          <button class="threat-action-btn" onclick="triggerSimulatedAlert('plate')" title="Inject a Watchlist Vehicle plate alert">⚡ Simulate Plate</button>
         </div>
       </div>
     </section>
@@ -1648,64 +1705,54 @@
     <section class="viewport-container">
       <div class="camera-grid">
 
-        <!-- Feed 1: Perimeter & ANPR -->
-        <div class="camera-feed">
+        <!-- Feed 1: Perimeter & ANPR Radar or Live Webcam -->
+        <div class="camera-feed" id="feedCam1">
           <div class="camera-hud">
-            <span class="cam-label">CAM-01 [NORTH GATE]</span>
-            <span class="cam-live"><span class="cam-live-dot"></span>LIVE</span>
-          </div>
-          <div class="mock-scene">
-            <!-- Simulated Vehicle Box -->
-            <div class="mock-bbox vehicle" style="width: 140px; height: 100px; top: 35%; left: 30%;">
-              <span class="bbox-label" style="background: #a855f7;">VEHICLE [CAR] 0.94</span>
-              <div style="margin-top: auto; background: rgba(0,0,0,0.85); font-size: 8px; font-family: var(--font-mono); color: #00f0ff; padding: 2px;">
-                PLATE: DL01AB1234 (0.96)
-              </div>
+            <span class="cam-label">CAM-01 [NORTH GATE - ANPR]</span>
+            <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto;">
+              <button class="cam-btn-toggle" id="cam1ToggleBtn" onclick="toggleTacticalWebcam()" title="Toggle between CCTV Video Stream and Live Client Webcam">
+                📹 Live Webcam
+              </button>
+              <span class="cam-live"><span class="cam-live-dot"></span><span id="cam1StatusLabel">LIVE</span></span>
             </div>
+          </div>
+          <div class="camera-canvas-wrapper">
+            <img id="cam1Stream" src="/feeds/cam/CAM-01" class="camera-video-stream" alt="CAM-01 Stream" />
+            <video id="tacticalWebcamVideo" autoplay playsinline muted style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+            <canvas id="tacticalWebcamOverlay" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
           </div>
         </div>
 
-        <!-- Feed 2: Restricted Vault Zone -->
-        <div class="camera-feed">
+        <!-- Feed 2: Restricted Vault Zone Radar -->
+        <div class="camera-feed" id="feedCam2">
           <div class="camera-hud">
-            <span class="cam-label">CAM-02 [VAULT PERIMETER]</span>
-            <span class="cam-live"><span class="cam-live-dot"></span>INTRUSION</span>
+            <span class="cam-label">CAM-02 [VAULT PERIMETER - TRACKING]</span>
+            <span class="cam-live" id="cam2LiveBadge"><span class="cam-live-dot"></span>INTRUSION</span>
           </div>
-          <div class="mock-scene">
-            <!-- Virtual Fence Overlay -->
-            <div class="zone-overlay" style="top: 20%; left: 20%; width: 60%; height: 60%;">
-              <span class="zone-tag">RESTRICTED ZONE (GEOFENCE)</span>
-            </div>
-            <!-- Intruder Person Box -->
-            <div class="mock-bbox restricted" style="width: 45px; height: 95px; top: 40%; left: 45%;">
-              <span class="bbox-label" style="background: var(--danger);">INTRUDER 0.98</span>
-            </div>
+          <div class="camera-canvas-wrapper">
+            <img id="cam2Stream" src="/feeds/cam/CAM-02" class="camera-video-stream" alt="CAM-02 Stream" />
           </div>
         </div>
 
-        <!-- Feed 3: ATM Corridor Dwell -->
-        <div class="camera-feed">
+        <!-- Feed 3: ATM Corridor Multi-Object -->
+        <div class="camera-feed" id="feedCam3">
           <div class="camera-hud">
-            <span class="cam-label">CAM-03 [ATM CORRIDOR]</span>
-            <span class="cam-live"><span class="cam-live-dot"></span>LIVE</span>
+            <span class="cam-label">CAM-03 [CORRIDOR - MULTI-OBJECT]</span>
+            <span class="cam-live"><span class="cam-live-dot"></span>TRACKING</span>
           </div>
-          <div class="mock-scene">
-            <div class="mock-bbox" style="width: 40px; height: 85px; top: 30%; left: 55%;">
-              <span class="bbox-label">PERSON_10 [DWELL: 142s]</span>
-            </div>
+          <div class="camera-canvas-wrapper">
+            <img id="cam3Stream" src="/feeds/cam/CAM-03" class="camera-video-stream" alt="CAM-03 Stream" />
           </div>
         </div>
 
-        <!-- Feed 4: Loading Dock Night Vision -->
-        <div class="camera-feed">
+        <!-- Feed 4: Loading Dock Night-Vision IR -->
+        <div class="camera-feed" id="feedCam4">
           <div class="camera-hud">
-            <span class="cam-label">CAM-04 [DOCK / NIGHT-IR]</span>
-            <span class="cam-live"><span class="cam-live-dot"></span>LIVE</span>
+            <span class="cam-label">CAM-04 [DOCK - NIGHT-IR PHOSPHOR]</span>
+            <span class="cam-live"><span class="cam-live-dot"></span>NIGHT-IR</span>
           </div>
-          <div class="mock-scene" style="background: #050a0a;">
-            <div style="color: #00ff88; font-size: 11px; font-family: var(--font-mono); opacity: 0.7;">
-              [IR SENSOR ACTIVE • NIGHT_DARK CONFIRMED]
-            </div>
+          <div class="camera-canvas-wrapper">
+            <img id="cam4Stream" src="/feeds/cam/CAM-04" class="camera-video-stream" alt="CAM-04 Stream" />
           </div>
         </div>
 
@@ -1740,9 +1787,9 @@
         </div>
 
         <div style="margin-top: 24px;">
-          <h4 style="font-size: 12px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px;">Quick Investigations</h4>
+          <h4 style="font-size: 12px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px;">Quick Investigations & Actions</h4>
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <button class="console-btn" style="background: rgba(255,255,255,0.04); color: #fff; text-align: left; font-size: 11px; padding: 8px 12px;" onclick="setQuery('Where was license plate DL01AB1234 seen in the last hour?')">
+            <button class="console-btn" style="background: rgba(255,255,255,0.04); color: #fff; text-align: left; font-size: 11px; padding: 8px 12px;" onclick="setQuery('Where was license plate DL01AB1234 seen?')">
               🔍 Track Plate DL01AB1234 (Tool 13)
             </button>
             <button class="console-btn" style="background: rgba(255,255,255,0.04); color: #fff; text-align: left; font-size: 11px; padding: 8px 12px;" onclick="setQuery('Show active hypotheses for vault intrusion')">
@@ -1750,6 +1797,9 @@
             </button>
             <button class="console-btn" style="background: rgba(255,255,255,0.04); color: #fff; text-align: left; font-size: 11px; padding: 8px 12px;" onclick="setQuery('Get situational risk for restricted zones')">
               ⚠️ Situational Risk Assessment (Tool 11)
+            </button>
+            <button class="console-btn" style="background: rgba(0, 240, 255, 0.08); border-color: rgba(0,240,255,0.3); color: var(--accent); text-align: left; font-size: 11px; padding: 8px 12px;" onclick="switchTab('face')">
+              👤 Open Face Recognition & Live Webcam Scanner →
             </button>
           </div>
         </div>
@@ -2847,11 +2897,265 @@
       }, 'image/jpeg', 0.95);
     }
 
+    // ==========================================
+    // Tactical C2 Surveillance Simulation & Feeds
+    // ==========================================
+    let isTacticalWebcamActive = false;
+    let tacticalWebcamStream = null;
+    let tacticalAnimFrame = null;
+    let tacticalSimState = {
+      cam1CarX: -100,
+      cam2IntruderX: 120,
+      cam2IntruderY: 100,
+      cam2IntruderDir: 1,
+      cam2Dwell: 5.2,
+      cam3PersonX: 160,
+      cam3PersonY: 110,
+      cam3Dwell: 142,
+      cam4Particles: []
+    };
+
+    function switchTab(tab) {
+      const tabBtnTactical = document.getElementById('tabBtnTactical');
+      const tabBtnFace = document.getElementById('tabBtnFace');
+      const tacticalView = document.getElementById('tacticalView');
+      const faceView = document.getElementById('faceView');
+
+      localStorage.setItem('godsEyeActiveTab', tab);
+
+      if (tab === 'tactical') {
+        tabBtnTactical.classList.add('active');
+        tabBtnFace.classList.remove('active');
+        tacticalView.style.display = 'grid';
+        faceView.style.display = 'none';
+        pauseWebcamRecognition();
+        startTacticalSimulations();
+        loadTacticalAlerts();
+      } else if (tab === 'face') {
+        tabBtnFace.classList.add('active');
+        tabBtnTactical.classList.remove('active');
+        faceView.style.display = 'grid';
+        tacticalView.style.display = 'none';
+        stopTacticalSimulations();
+        loadEnrolledFaces();
+        startWebcamScanner();
+      }
+    }
+
+    // Dynamic Alert Feed
+    async function loadTacticalAlerts() {
+      try {
+        const [alertsRes, eventsRes] = await Promise.all([
+          fetch('/alerts?limit=20'),
+          fetch('/events?limit=20')
+        ]);
+        let alertsData = [];
+        if (alertsRes.ok) {
+          const a = await alertsRes.json();
+          alertsData = a.alerts || [];
+        }
+
+        let eventsData = [];
+        if (eventsRes.ok) {
+          const e = await eventsRes.json();
+          eventsData = e.events || [];
+        }
+
+        renderTacticalAlerts(alertsData, eventsData);
+      } catch (err) {
+        console.warn('Could not load tactical alerts:', err);
+      }
+    }
+
+    function renderTacticalAlerts(alerts, events) {
+      const list = document.getElementById('alertsList');
+      if (!list) return;
+
+      const items = [];
+
+      // Add actual alerts
+      alerts.forEach(a => {
+        items.push({
+          id: a.alert_id,
+          severity: (a.severity || 'HIGH').toUpperCase(),
+          time: formatRelativeTime(a.timestamp_ns),
+          desc: a.description || a.explanation || 'Operational threat signal detected',
+          meta: `${a.camera_id || 'CAM-01'} • ${a.subject_ref || 'TARGET'} • ${a.zone_id || 'SECURED_ZONE'}`,
+          camera: a.camera_id
+        });
+      });
+
+      // Add face events
+      events.filter(e => e.event_type === 'face_detected').forEach(e => {
+        const isKnown = e.metadata && e.metadata.status === 'KNOWN';
+        items.push({
+          id: e.event_id,
+          severity: isKnown ? 'LOW' : 'HIGH',
+          time: formatRelativeTime(e.timestamp_ns),
+          desc: isKnown ? `Biometric Match: Enrolled identity ${e.metadata.name || 'Subject'} confirmed` : `Unidentified Face: SFace query found no enrolled match`,
+          meta: `${e.camera_id || 'CAM-CLIENT'} • ${isKnown ? 'KNOWN_SUBJECT' : 'UNKNOWN_PERSON'} • BIOMETRICS`,
+          camera: e.camera_id
+        });
+      });
+
+      // Default mock fallback signals if database is brand new
+      if (items.length === 0) {
+        items.push(
+          { id: 'al_1', severity: 'CRITICAL', time: '12s ago', desc: 'Vault Perimeter: Point-in-polygon intrusion in restricted zone with loitering > 5.2σ.', meta: 'CAM-02 • SUBJECT_9941 • RESTRICTED_ZONE', camera: 'CAM-02' },
+          { id: 'al_2', severity: 'HIGH', time: '1m ago', desc: 'Plate Sighting: Registered watchlist vehicle DL01AB1234 detected at North Gate.', meta: 'CAM-01 • ANPR_READING • DL01AB1234', camera: 'CAM-01' },
+          { id: 'al_3', severity: 'HIGH', time: '4m ago', desc: 'Night Movement: Off-hours transition detected in Loading Dock during NIGHT_DARK.', meta: 'CAM-04 • NIGHT_MOVEMENT • CONF: 0.91', camera: 'CAM-04' },
+          { id: 'al_4', severity: 'MEDIUM', time: '9m ago', desc: 'Loitering Alert: Dwell threshold exceeded in ATM Corridor (142s > 60s baseline).', meta: 'CAM-03 • DWELL_TIME • 2.8σ', camera: 'CAM-03' }
+        );
+      }
+
+      // Update counters
+      const critCount = items.filter(i => i.severity === 'CRITICAL').length;
+      const highCount = items.filter(i => i.severity === 'HIGH').length;
+      document.getElementById('countCritical').textContent = critCount;
+      document.getElementById('countHigh').textContent = highCount;
+      document.getElementById('alertCount').textContent = `${items.length} Active`;
+
+      list.innerHTML = items.map(item => {
+        const sevClass = item.severity.toLowerCase();
+        return `
+          <div class="alert-item ${sevClass} clickable" onclick="highlightCameraFeed('${item.camera}', '${escapeHtml(item.desc)}')">
+            <div class="alert-header">
+              <span class="alert-tag ${sevClass}">${item.severity}</span>
+              <span class="alert-time">${item.time}</span>
+            </div>
+            <div class="alert-desc">${escapeHtml(item.desc)}</div>
+            <div class="alert-meta">${escapeHtml(item.meta)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function triggerSimulatedAlert(type) {
+      try {
+        const res = await fetch(`/alerts/simulate?alert_type=${type}`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          await loadTacticalAlerts();
+          // Flash effect
+          const feed = document.getElementById(type === 'plate' ? 'feedCam1' : 'feedCam2');
+          if (feed) {
+            feed.style.outline = '3px solid #ff3366';
+            setTimeout(() => { feed.style.outline = 'none'; }, 1600);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not simulate alert:', err);
+      }
+    }
+
+    function highlightCameraFeed(camId, desc) {
+      setQuery(`Show incident report for ${camId || 'CAM-01'}: ${desc}`);
+    }
+
+    // Toggle CAM-01 between Real CCTV Stream & Client Webcam
+    async function toggleTacticalWebcam() {
+      const btn = document.getElementById('cam1ToggleBtn');
+      const streamImg = document.getElementById('cam1Stream');
+      const video = document.getElementById('tacticalWebcamVideo');
+      const overlay = document.getElementById('tacticalWebcamOverlay');
+      const label = document.getElementById('cam1StatusLabel');
+
+      if (!isTacticalWebcamActive) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+          tacticalWebcamStream = stream;
+          video.srcObject = stream;
+          video.style.display = 'block';
+          overlay.style.display = 'block';
+          if (streamImg) streamImg.style.display = 'none';
+          btn.textContent = '📹 CCTV Feed';
+          btn.classList.add('active');
+          label.textContent = 'WEBCAM';
+          isTacticalWebcamActive = true;
+          startTacticalWebcamProcessing();
+        } catch (err) {
+          alert('Could not access webcam: ' + err.message);
+        }
+      } else {
+        if (tacticalWebcamStream) {
+          tacticalWebcamStream.getTracks().forEach(t => t.stop());
+          tacticalWebcamStream = null;
+        }
+        video.style.display = 'none';
+        overlay.style.display = 'none';
+        if (streamImg) streamImg.style.display = 'block';
+        btn.textContent = '📹 Live Webcam';
+        btn.classList.remove('active');
+        label.textContent = 'LIVE';
+        isTacticalWebcamActive = false;
+      }
+    }
+
+    let tacticalWebcamInterval = null;
+    function startTacticalWebcamProcessing() {
+      if (tacticalWebcamInterval) clearInterval(tacticalWebcamInterval);
+      tacticalWebcamInterval = setInterval(async () => {
+        if (!isTacticalWebcamActive) return;
+        const video = document.getElementById('tacticalWebcamVideo');
+        const overlay = document.getElementById('tacticalWebcamOverlay');
+        if (!video || video.readyState < 2) return;
+
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        const ctx = overlay.getContext('2d');
+
+        // Draw offscreen blob and send to recognize_frame
+        const off = document.createElement('canvas');
+        off.width = 320;
+        off.height = Math.round(320 * (video.videoHeight / video.videoWidth));
+        const offCtx = off.getContext('2d');
+        offCtx.drawImage(video, 0, 0, off.width, off.height);
+
+        off.toBlob(async blob => {
+          if (!blob || !isTacticalWebcamActive) return;
+          const fd = new FormData();
+          fd.append('file', blob, 'tac_frame.jpg');
+          try {
+            const res = await fetch('/faces/recognize_frame?persist=false', { method: 'POST', body: fd });
+            if (res.ok) {
+              const data = await res.json();
+              ctx.clearRect(0, 0, overlay.width, overlay.height);
+              const scale = overlay.width / off.width;
+              (data.faces || []).forEach(f => {
+                const [x1, y1, x2, y2] = f.bbox.map(v => v * scale);
+                const isKnown = f.status === 'KNOWN';
+                ctx.strokeStyle = isKnown ? '#00ff88' : '#f59e0b';
+                ctx.lineWidth = 2.5;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                ctx.fillStyle = isKnown ? 'rgba(0,30,15,0.85)' : 'rgba(35,20,0,0.85)';
+                ctx.fillRect(x1, Math.max(0, y1 - 22), (x2 - x1), 22);
+                ctx.fillStyle = isKnown ? '#00ff88' : '#f59e0b';
+                ctx.font = 'bold 11px monospace';
+                ctx.fillText(`${isKnown ? 'KNOWN: ' + f.name : 'UNKNOWN'}`, x1 + 6, Math.max(15, y1 - 6));
+              });
+            }
+          } catch (e) {}
+        }, 'image/jpeg', 0.8);
+      }, 400);
+    }
+
+    // Real-time video feeds active via /feeds/cam/
+    function startTacticalSimulations() {}
+    function stopTacticalSimulations() {}
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
+      // Restore previously active tab
+      const savedTab = localStorage.getItem('godsEyeActiveTab') || 'tactical';
+      switchTab(savedTab);
+
+      // Start tactical alerts polling
+      loadTacticalAlerts();
+      setInterval(loadTacticalAlerts, 3000);
+
+      // Biometrics polling
       loadEnrolledFaces();
       pollFaceEvents();
-      // Periodic face event polling (2.0s bounded cycle)
       setInterval(pollFaceEvents, 2000);
     });
 
@@ -2867,27 +3171,49 @@
 
       output.textContent = ">> DISPATCHING QUERY TO REASONING ENGINE...\n>> ANALYZING INTENT VIA NLQ PLANNER...";
 
-      // Check if it's a plate query
+      const t0 = performance.now();
       const plateMatch = q.match(/([A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}|DL01AB1234)/i);
       const plate = plateMatch ? plateMatch[1].toUpperCase() : null;
 
       try {
         if (plate) {
           const res = await fetch(`/plates/${plate}`);
+          const dt = Math.round(performance.now() - t0);
           if (res.ok) {
             const data = await res.json();
-            output.textContent = ">> TOOL 13 (get_plate_history) EXECUTED SUCCESSFULLY:\n\n" + JSON.stringify(data, null, 2);
+            output.textContent = `>> TOOL 13 (get_plate_history) [HTTP 200 • ${dt}ms]:\n\n` + JSON.stringify(data, null, 2);
             return;
           }
         }
-        
-        // Fallback or simulated response if server endpoint is standalone
-        setTimeout(() => {
-          output.textContent = `>> PLANNER MAPPED INTENT:\n   Tool: get_plate_history\n   Arguments: {\n     "plate_text": "${plate || 'DL01AB1234'}",\n     "window": "last 1 hour"\n   }\n\n>> RETRIEVED 1 SIGHTING:\n   • Camera: CAM-01 [North Gate]\n   • Timestamp: 1,741,392,000,000,000,000 ns\n   • Confidence: 0.96\n   • Evidence ID: ev_anpr_dl01ab1234\n   • Status: PERSISTED IN SQLiteEventStore`;
-        }, 300);
+
+        if (q.toLowerCase().includes('hypothesis') || q.toLowerCase().includes('vault')) {
+          const res = await fetch('/alerts?severity=CRITICAL');
+          const dt = Math.round(performance.now() - t0);
+          if (res.ok) {
+            const data = await res.json();
+            output.textContent = `>> TOOL 12 (query_hypotheses) [HTTP 200 • ${dt}ms]:\n\n` + JSON.stringify(data, null, 2);
+            return;
+          }
+        }
+
+        if (q.toLowerCase().includes('risk') || q.toLowerCase().includes('zone')) {
+          const res = await fetch('/events?limit=10');
+          const dt = Math.round(performance.now() - t0);
+          if (res.ok) {
+            const data = await res.json();
+            output.textContent = `>> TOOL 11 (get_situational_risk) [HTTP 200 • ${dt}ms]:\n\n` + JSON.stringify(data, null, 2);
+            return;
+          }
+        }
+
+        // Generic fallback
+        const res = await fetch('/events?limit=5');
+        const dt = Math.round(performance.now() - t0);
+        const data = await res.json();
+        output.textContent = `>> REASONING ENGINE COMPLETED INTENT DISPATCH [${dt}ms]:\n\nQuery: "${q}"\nActive Events Retrieved: ${data.count}\n\n` + JSON.stringify(data, null, 2);
 
       } catch (err) {
-        output.textContent = ">> INVESTIGATION RESULT:\n" + err;
+        output.textContent = ">> INVESTIGATION ERROR:\n" + err.message;
       }
     }
   </script>

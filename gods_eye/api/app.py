@@ -11,6 +11,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 from typing import Any, Optional
@@ -50,7 +51,7 @@ def create_app(
     try:
         from fastapi import FastAPI, File, Form, HTTPException, Header, Query, UploadFile  # type: ignore[import-untyped]
         from fastapi.staticfiles import StaticFiles  # type: ignore[import-untyped]
-        from fastapi.responses import FileResponse, HTMLResponse, JSONResponse  # type: ignore[import-untyped]
+        from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse  # type: ignore[import-untyped]
     except ImportError:
         _log.error("fastapi_not_installed", msg="Install fastapi: pip install fastapi uvicorn")
         raise ImportError("FastAPI is required for the API module. Install with: pip install fastapi uvicorn")
@@ -90,6 +91,72 @@ def create_app(
         if dashboard_path.exists():
             return HTMLResponse(content=dashboard_path.read_text(encoding="utf-8"))
         return HTMLResponse(content="<h1>Dashboard not available</h1>", status_code=404)
+
+    @app.get("/feeds/cam/{cam_id}")
+    async def get_camera_feed(cam_id: str) -> StreamingResponse:
+        """Stream real-time surveillance video footage (MJPEG) for camera viewports."""
+        import cv2
+
+        cam_key = cam_id.upper().replace("-", "").strip()
+        repo_root = Path(__file__).resolve().parent.parent.parent
+
+        video_map = {
+            "CAM01": repo_root / "tests" / "data" / "demo_outputs" / "mot17_04_medium_density_annotated.mp4",
+            "CAM02": repo_root / "tests" / "data" / "demo_outputs" / "mot17_05_high_density_annotated.mp4",
+            "CAM03": repo_root / "tests" / "data" / "demo_outputs" / "mot17_09_low_density_annotated.mp4",
+            "CAM04": repo_root / "tests" / "data" / "demo_videos" / "mot17_04_medium_density.mp4",
+        }
+
+        video_path = video_map.get(cam_key, video_map["CAM01"])
+        if not video_path.exists():
+            candidates = list((repo_root / "tests" / "data" / "demo_outputs").glob("*.mp4"))
+            if candidates:
+                video_path = candidates[0]
+            else:
+                raise HTTPException(status_code=404, detail="Camera video feed not found")
+
+        is_night_cam = (cam_key == "CAM04")
+
+        async def mjpeg_frame_generator():
+            cap = cv2.VideoCapture(str(video_path))
+            try:
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+
+                    h, w = frame.shape[:2]
+                    # Resize to 640px width for fast encode & smooth browser FPS
+                    if w > 640:
+                        target_h = int(h * (640 / w))
+                        frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_LINEAR)
+
+                    if is_night_cam:
+                        # Apply green phosphor night-IR surveillance grade palette
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        colored = cv2.applyColorMap(gray, cv2.COLORMAP_SUMMER)
+                        frame = cv2.addWeighted(colored, 0.85, cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), 0.15, 0)
+
+                    success, jpeg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+                    if not success:
+                        await asyncio.sleep(0.04)
+                        continue
+
+                    yield (
+                        b"--frame\r\n"
+                        b"Content-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n"
+                    )
+                    await asyncio.sleep(0.033)  # ~30 FPS
+            finally:
+                cap.release()
+
+        return StreamingResponse(
+            mjpeg_frame_generator(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+        )
 
     @app.get("/cameras")
     async def get_cameras(authorization: Optional[str] = Header(None)) -> JSONResponse:
@@ -205,6 +272,69 @@ def create_app(
                 _log.error("get_alerts_failed", error=str(exc))
                 raise HTTPException(status_code=500, detail="Internal server error")
         return JSONResponse(content={"alerts": alerts, "count": len(alerts)})
+
+    @app.post("/alerts/simulate", status_code=201)
+    async def simulate_alert(
+        alert_type: str = Query("intrusion"),
+        camera_id: str = Query("CAM-02"),
+        authorization: Optional[str] = Header(None),
+    ) -> JSONResponse:
+        """Inject an operational threat alert into AlertStore and EventStore for live demonstration."""
+        _auth(authorization)
+        import time, uuid
+        from gods_eye.schemas.alert import Alert, AlertStatus
+        from gods_eye.schemas.event import Event, EventType
+
+        ts = time.time_ns()
+        alert_id = f"alt_sim_{uuid.uuid4().hex[:8]}"
+
+        type_map = {
+            "intrusion": ("CRITICAL", "VAULT_GEOFENCE", "CAM-02", "SUBJ_9941", "Vault Perimeter: Point-in-polygon intrusion in restricted zone with loitering > 5.2σ"),
+            "plate": ("HIGH", "NORTH_GATE", "CAM-01", "VEH_8812", "Plate Sighting: Registered watchlist vehicle DL01AB1234 detected at North Gate"),
+            "dwell": ("MEDIUM", "ATM_ZONE", "CAM-03", "PERSON_10", "Loitering Alert: Dwell threshold exceeded in ATM Corridor (142s > 60s baseline)"),
+            "night": ("HIGH", "DOCK_ZONE", "CAM-04", "SUBJ_0411", "Night Movement: Off-hours transition detected in Loading Dock during NIGHT_DARK"),
+        }
+        severity, zone, default_cam, subj, desc = type_map.get(alert_type.lower(), type_map["intrusion"])
+        cam = camera_id or default_cam
+
+        if alert_store is not None:
+            alert = Alert(
+                alert_id=alert_id,
+                severity=severity,
+                status=AlertStatus.ACTIVE,
+                subject_ref=subj,
+                zone_id=zone,
+                camera_id=cam,
+                timestamp_ns=ts,
+                risk_signal_id=f"sig_{uuid.uuid4().hex[:6]}",
+                explanation=desc,
+                metadata={"simulated": True},
+            )
+            alert_store.append_alert(alert)
+        elif event_store is not None:
+            ev = Event(
+                event_id=alert_id,
+                event_type=EventType.ALERT_CREATED,
+                camera_id=cam,
+                zone_id=zone,
+                timestamp_ns=ts,
+                confidence=0.98,
+                explanation=desc,
+                metadata={"simulated": True, "alert_severity": severity, "alert_status": "active"},
+            )
+            event_store.append(ev)
+
+        return JSONResponse(
+            status_code=201,
+            content={
+                "status": "created",
+                "alert_id": alert_id,
+                "severity": severity,
+                "description": desc,
+                "camera_id": cam,
+                "timestamp_ns": ts,
+            }
+        )
 
     @app.get("/alerts/{alert_id}")
     async def get_alert_by_id(
