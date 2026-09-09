@@ -627,6 +627,146 @@ def create_app(
             }
         )
 
+    # Live Engine Cache for real-time webcam frame streams
+    _live_engine_cache: dict[str, Any] = {}
+
+    def _get_live_engine() -> Optional[Any]:
+        if "engine" in _live_engine_cache:
+            return _live_engine_cache["engine"]
+        if event_store is not None and evidence_manager is not None:
+            try:
+                from gods_eye.face.live_engine import LiveFaceEngine
+                from gods_eye.face.recognizer import FaceRecognizer
+                from gods_eye.memory.graph_store import SQLiteGraphStore
+
+                r = face_recognizer or FaceRecognizer()
+                gs = graph_store or SQLiteGraphStore("data/graph.db")
+                engine = LiveFaceEngine(
+                    recognizer=r,
+                    graph_store=gs,
+                    event_store=event_store,
+                    evidence_manager=evidence_manager,
+                    throttle_window_s=3.0,
+                )
+                _live_engine_cache["engine"] = engine
+                return engine
+            except Exception as e:
+                _log.warning("live_engine_init_failed", error=str(e))
+        return None
+
+    @app.post("/faces/recognize_frame")
+    async def recognize_frame_endpoint(
+        file: UploadFile = File(...),
+        authorization: Optional[str] = Header(None),
+        persist: bool = Query(True),
+    ) -> JSONResponse:
+        """Process a live webcam frame: detect all faces, identify enrolled persons, and return recognition overlay data."""
+        _auth(authorization)
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="Uploaded frame is empty")
+
+        import cv2
+        import numpy as np
+
+        nparr = np.frombuffer(contents, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if frame is None:
+            raise HTTPException(status_code=400, detail="Invalid image file or unreadable format")
+
+        rec = face_recognizer
+        if rec is None:
+            try:
+                from gods_eye.face.recognizer import FaceRecognizer
+                rec = FaceRecognizer()
+            except Exception as exc:
+                _log.error("face_recognizer_unavailable", error=str(exc))
+                raise HTTPException(status_code=503, detail="Face recognition model unavailable")
+
+        # Check if live engine can process and emit canonical events
+        live_eng = _get_live_engine() if persist else None
+        if live_eng is not None:
+            try:
+                results = live_eng.process_frame(frame, camera_id="WEBCAM")
+                faces_data = [
+                    {
+                        "status": r.status,
+                        "person_id": r.person_id,
+                        "name": r.name,
+                        "similarity": float(r.similarity),
+                        "detection_confidence": float(r.detection_confidence),
+                        "bbox": [float(r.bbox.x1), float(r.bbox.y1), float(r.bbox.x2), float(r.bbox.y2)],
+                    }
+                    for r in results
+                ]
+                return JSONResponse(
+                    content={
+                        "faces": faces_data,
+                        "count": len(faces_data),
+                        "frame_width": int(frame.shape[1]),
+                        "frame_height": int(frame.shape[0]),
+                    }
+                )
+            except Exception as exc:
+                _log.warning("live_engine_process_fallback", error=str(exc))
+
+        # Direct recognition without EventStore
+        target_store = graph_store
+        if target_store is None:
+            from gods_eye.memory.graph_store import SQLiteGraphStore
+            target_store = SQLiteGraphStore("data/graph.db")
+
+        gallery = target_store.get_enrolled_faces()
+        detected = rec.detect_faces(frame)
+        faces_data = []
+
+        for bbox, conf, face_data in detected:
+            try:
+                query_emb = rec.extract_embedding(frame, face_data)
+            except Exception:
+                continue
+
+            best_sim = -1.0
+            best_rec = None
+            for record in gallery:
+                ref_emb = record.embedding if hasattr(record, "embedding") else record["embedding"]
+                if isinstance(ref_emb, (bytes, bytearray)):
+                    ref_emb = np.frombuffer(ref_emb, dtype=np.float32)
+                elif isinstance(ref_emb, list):
+                    ref_emb = np.array(ref_emb, dtype=np.float32)
+                sim = rec.match(ref_emb, query_emb)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_rec = record
+
+            best_sim_bounded = max(0.0, best_sim)
+            if best_rec is not None and best_sim >= rec.recognition_threshold:
+                st = "KNOWN"
+                pid = str(best_rec.person_id if hasattr(best_rec, "person_id") else best_rec["person_id"])
+                pname = str(best_rec.name if hasattr(best_rec, "name") else best_rec["name"])
+            else:
+                st = "UNKNOWN"
+                pid = None
+                pname = None
+
+            faces_data.append({
+                "status": st,
+                "person_id": pid,
+                "name": pname,
+                "similarity": float(best_sim_bounded),
+                "detection_confidence": float(conf),
+                "bbox": [float(bbox.x1), float(bbox.y1), float(bbox.x2), float(bbox.y2)],
+            })
+
+        return JSONResponse(
+            content={
+                "faces": faces_data,
+                "count": len(faces_data),
+                "frame_width": int(frame.shape[1]),
+                "frame_height": int(frame.shape[0]),
+            }
+        )
+
     return app
 
 
@@ -638,6 +778,7 @@ try:
     from gods_eye.alerts.alert_store import AlertStore
     from gods_eye.evidence.evidence_manager import EvidenceManager
     from gods_eye.reasoning.tools import ToolDispatcher
+    from gods_eye.face.recognizer import FaceRecognizer
 
     _settings = Settings.from_env()
     _default_event_store = SQLiteEventStore(db_path=_settings.event_store_path)
@@ -645,6 +786,10 @@ try:
     _default_alert_store = AlertStore(event_store=_default_event_store)
     _default_evidence_mgr = EvidenceManager(base_path=_settings.evidence_base_path)
     _default_dispatcher = ToolDispatcher(event_store=_default_event_store)
+    try:
+        _default_face_rec = FaceRecognizer()
+    except Exception:
+        _default_face_rec = None
 
     app = create_app(
         event_store=_default_event_store,
@@ -652,6 +797,7 @@ try:
         alert_store=_default_alert_store,
         evidence_manager=_default_evidence_mgr,
         tool_dispatcher=_default_dispatcher,
+        face_recognizer=_default_face_rec,
     )
 except Exception as _init_exc:
     _log.warning("api_default_instance_fallback", error=str(_init_exc))

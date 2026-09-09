@@ -774,5 +774,67 @@ class TestFaceEvidenceAndWebsiteAPI:
             finally:
                 store.close()
 
+    def test_recognize_frame_endpoint(self) -> None:
+        """POST /faces/recognize_frame processes uploaded frame and returns detection/recognition results."""
+        import cv2
+        import numpy as np
+        from gods_eye.schemas.detection import BoundingBox
+
+        # Create dummy frame
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+        _, buf = cv2.imencode(".jpg", img)
+        frame_bytes = buf.tobytes()
+
+        mock_recognizer = MagicMock()
+        mock_recognizer.detect_faces.return_value = [
+            (BoundingBox(10.0, 15.0, 60.0, 65.0), 0.95, np.zeros(15, dtype=np.float32))
+        ]
+        mock_recognizer.extract_embedding.return_value = np.ones(128, dtype=np.float32)
+        mock_recognizer.recognition_threshold = 0.363
+        mock_recognizer.match.return_value = 0.85
+
+        mock_graph = MagicMock()
+        mock_person = MagicMock()
+        mock_person.person_id = "person_webcam_01"
+        mock_person.name = "Atharv"
+        mock_person.embedding = np.ones(128, dtype=np.float32)
+        mock_graph.get_enrolled_faces.return_value = [mock_person]
+
+        app = create_app(graph_store=mock_graph, face_recognizer=mock_recognizer)
+        client = TestClient(app)
+
+        res = client.post(
+            "/faces/recognize_frame?persist=false",
+            files={"file": ("frame.jpg", frame_bytes, "image/jpeg")},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["count"] == 1
+        assert data["frame_width"] == 100
+        assert data["frame_height"] == 100
+        face = data["faces"][0]
+        assert face["status"] == "KNOWN"
+        assert face["name"] == "Atharv"
+        assert face["person_id"] == "person_webcam_01"
+        assert face["similarity"] == 0.85
+        assert face["bbox"] == [10.0, 15.0, 60.0, 65.0]
+
+    def test_dashboard_webcam_scanner_elements(self) -> None:
+        """Dashboard HTML must contain live webcam scanner viewport, video, and controls."""
+        app = create_app()
+        client = TestClient(app)
+
+        res = client.get("/dashboard")
+        assert res.status_code == 200
+        html = res.text
+        assert 'id="webcamVideo"' in html
+        assert 'id="webcamOverlayCanvas"' in html
+        assert 'id="webcamPromptOverlay"' in html
+        assert 'id="webcamToggleBtn"' in html
+        assert 'id="webcamSnapBtn"' in html
+        assert 'id="webcamMirrorBtn"' in html
+        assert 'id="webcamDeviceSelect"' in html
+
+
 
 

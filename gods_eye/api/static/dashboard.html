@@ -559,14 +559,355 @@
       margin-left: 2px;
     }
 
-    /* Face Recognition Workspace Layout */
+    /* Face Recognition Workspace Layout (3 Columns) */
     .face-view-container {
       display: grid;
-      grid-template-columns: 420px 1fr;
-      gap: 24px;
+      grid-template-columns: 330px 1fr 370px;
+      gap: 18px;
       height: calc(100vh - 64px);
       overflow: hidden;
-      padding: 24px 28px;
+      padding: 18px 22px;
+    }
+
+    @media (max-width: 1440px) {
+      .face-view-container {
+        grid-template-columns: 300px 1fr 340px;
+        gap: 14px;
+        padding: 14px;
+      }
+    }
+
+    @media (max-width: 1120px) {
+      .face-view-container {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow-y: auto;
+      }
+    }
+
+    /* Center Webcam Scanner Panel */
+    .webcam-scanner-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .webcam-panel-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 14px;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .webcam-viewport-container {
+      position: relative;
+      flex: 1;
+      min-height: 320px;
+      background: #020617;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 240, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .webcam-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .webcam-video.mirrored {
+      transform: scaleX(-1);
+    }
+
+    .webcam-overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .webcam-scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.9), transparent);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.95);
+      pointer-events: none;
+      z-index: 3;
+      animation: scanMovement 2.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes scanMovement {
+      0% { top: 4%; opacity: 0.2; }
+      50% { opacity: 0.95; }
+      100% { top: 94%; opacity: 0.2; }
+    }
+
+    /* Futuristic Top HUD */
+    .webcam-hud-top {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .hud-item {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+      background: rgba(4, 13, 26, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 4px 10px;
+      border-radius: 6px;
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-cam-id {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .hud-target-badge {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .hud-target-badge.searching {
+      color: #7dd3fc;
+      border-color: rgba(125, 211, 252, 0.3);
+    }
+
+    .hud-target-badge.known {
+      color: #00ff88;
+      background: rgba(0, 30, 15, 0.9);
+      border-color: rgba(0, 255, 136, 0.6);
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.35);
+    }
+
+    .hud-target-badge.unknown {
+      color: #f59e0b;
+      background: rgba(35, 20, 0, 0.9);
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    }
+
+    .hud-pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+      display: inline-block;
+    }
+
+    /* Prompt Overlay */
+    .webcam-prompt-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(6, 12, 24, 0.95);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 28px;
+      z-index: 5;
+    }
+
+    .prompt-icon-ring {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      margin-bottom: 14px;
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.2);
+    }
+
+    .prompt-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .prompt-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 360px;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .prompt-action-btn {
+      padding: 11px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .prompt-error-msg {
+      margin-top: 14px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--danger);
+      background: rgba(255, 59, 48, 0.12);
+      border: 1px solid rgba(255, 59, 48, 0.35);
+      padding: 8px 12px;
+      border-radius: 6px;
+      max-width: 380px;
+    }
+
+    /* Controls Bar */
+    .webcam-controls-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .webcam-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .webcam-action-btn.primary {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: rgba(0, 240, 255, 0.35);
+      color: var(--accent);
+    }
+    .webcam-action-btn.primary:hover {
+      background: rgba(0, 240, 255, 0.24);
+      border-color: var(--accent);
+    }
+
+    .webcam-action-btn.secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+    }
+    .webcam-action-btn.secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .webcam-action-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .webcam-select {
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      max-width: 140px;
+    }
+
+    .webcam-btn.mirror-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .webcam-btn.mirror-btn.active {
+      color: var(--accent);
+      border-color: rgba(0, 240, 255, 0.4);
+      background: rgba(0, 240, 255, 0.12);
+    }
+
+    .telemetry-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .pill-label { color: var(--text-dim); }
+    .pill-val { color: var(--accent); font-weight: 700; }
+
+    .webcam-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+    .webcam-status-dot.active {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+    .webcam-badge {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .webcam-badge.active {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+    .webcam-badge.offline {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-dim);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .face-left-column {
@@ -1498,7 +1839,86 @@
 
     </div>
 
-    <!-- Column 2: Live Face Events Stream -->
+    <!-- Column 2: Live Webcam Biometric Scanner HUD -->
+    <section class="panel webcam-scanner-panel">
+      <div class="panel-header">
+        <div class="panel-title" style="gap: 8px;">
+          <span class="webcam-status-dot" id="webcamStatusDot"></span>
+          <span>Live Device Webcam Scanner</span>
+          <span id="webcamStatusText" class="webcam-badge offline">OFFLINE</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <select id="webcamDeviceSelect" class="webcam-select" onchange="changeWebcamDevice(this.value)" title="Select Video Input Device">
+            <option value="">Default Camera</option>
+          </select>
+          <button class="webcam-btn mirror-btn active" id="webcamMirrorBtn" onclick="toggleWebcamMirror()" title="Toggle Mirror View">
+            🪞 Mirror
+          </button>
+        </div>
+      </div>
+
+      <div class="webcam-panel-body">
+        <!-- Main Video Viewport -->
+        <div class="webcam-viewport-container" id="webcamViewport">
+          <!-- Live Video & Overlay HUD -->
+          <video id="webcamVideo" class="webcam-video mirrored" autoplay playsinline muted></video>
+          <canvas id="webcamOverlayCanvas" class="webcam-overlay-canvas"></canvas>
+          <div class="webcam-scan-line" id="webcamScanLine" style="display: none;"></div>
+
+          <!-- Futuristic Top HUD Bar -->
+          <div class="webcam-hud-top" id="webcamHudTop" style="display: none;">
+            <div class="hud-item"><span class="hud-cam-id">CAM-CLIENT</span> <span id="webcamResText">640x480</span></div>
+            <div class="hud-item" id="webcamTargetHUD">
+              <span class="hud-pulse-dot"></span> SEARCHING TARGETS...
+            </div>
+            <div class="hud-item"><span id="scanLatencyBadge">--ms</span> AI INFERENCE</div>
+          </div>
+
+          <!-- Initial Permission & Activation Prompt (shown when camera is not running) -->
+          <div class="webcam-prompt-overlay" id="webcamPromptOverlay">
+            <div class="prompt-icon-ring">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M23 7l-7 5 7 5V7z"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
+            </div>
+            <div class="prompt-title">Device Webcam Recognition</div>
+            <div class="prompt-desc">
+              Grant browser camera permissions to stream your live video directly into OpenCV YuNet face detection & SFace biometric identification.
+            </div>
+            <button type="button" class="console-btn prompt-action-btn" onclick="startWebcamScanner()">
+              📹 Grant Permission & Start Webcam
+            </button>
+            <div id="webcamErrorMsg" class="prompt-error-msg" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="webcam-controls-toolbar">
+          <div class="toolbar-left">
+            <button type="button" class="webcam-action-btn primary" id="webcamToggleBtn" onclick="toggleWebcam()">
+              <span id="webcamToggleIcon">▶</span>
+              <span id="webcamToggleLabel">Start Camera</span>
+            </button>
+            <button type="button" class="webcam-action-btn secondary" id="webcamSnapBtn" onclick="handleQuickSnapToEnroll()" title="Capture current frame to enroll this face" disabled>
+              📸 Snap & Enroll
+            </button>
+          </div>
+          <div class="toolbar-right">
+            <div class="telemetry-pill">
+              <span class="pill-label">STATUS:</span>
+              <span id="telemetryStatus" class="pill-val">IDLE</span>
+            </div>
+            <div class="telemetry-pill">
+              <span class="pill-label">FACES:</span>
+              <span id="telemetryFaceCount" class="pill-val">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Column 3: Live Face Events Stream -->
     <section class="panel face-events-panel">
       <div class="panel-header">
         <div class="panel-title" style="gap: 10px;">
@@ -1630,12 +2050,14 @@
         tabBtnFace.classList.remove('active');
         tacticalView.style.display = 'grid';
         faceView.style.display = 'none';
+        pauseWebcamRecognition();
       } else if (tab === 'face') {
         tabBtnFace.classList.add('active');
         tabBtnTactical.classList.remove('active');
         faceView.style.display = 'grid';
         tacticalView.style.display = 'none';
         loadEnrolledFaces();
+        startWebcamScanner(); // Auto-start webcam & prompt for camera permission
       }
     }
 
@@ -2045,6 +2467,384 @@
       if (diffSec < 60) return `${diffSec}s ago`;
       if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
       return d.toLocaleTimeString();
+    }
+
+    // ==========================================
+    // Real-Time Browser Webcam Face Scanner
+    // ==========================================
+    let webcamStream = null;
+    let isWebcamScanning = false;
+    let isFrameProcessing = false;
+    let webcamScanTimer = null;
+    let isWebcamMirrored = true;
+    let selectedCameraDeviceId = "";
+    let offscreenCanvas = null;
+
+    function showWebcamStatus(statusText, type) {
+      const dot = document.getElementById('webcamStatusDot');
+      const badge = document.getElementById('webcamStatusText');
+      const telem = document.getElementById('telemetryStatus');
+      if (badge) {
+        badge.textContent = statusText;
+        badge.className = `webcam-badge ${type}`;
+      }
+      if (dot) {
+        dot.className = `webcam-status-dot ${type === 'active' ? 'active' : ''}`;
+      }
+      if (telem) {
+        telem.textContent = statusText;
+      }
+    }
+
+    function toggleWebcamMirror() {
+      isWebcamMirrored = !isWebcamMirrored;
+      const video = document.getElementById('webcamVideo');
+      const btn = document.getElementById('webcamMirrorBtn');
+      if (video) {
+        video.classList.toggle('mirrored', isWebcamMirrored);
+      }
+      if (btn) {
+        btn.classList.toggle('active', isWebcamMirrored);
+      }
+    }
+
+    async function changeWebcamDevice(deviceId) {
+      selectedCameraDeviceId = deviceId;
+      if (isWebcamScanning) {
+        stopWebcamScanner();
+        await startWebcamScanner();
+      }
+    }
+
+    async function updateCameraDevicesList() {
+      const select = document.getElementById('webcamDeviceSelect');
+      if (!select || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        select.innerHTML = '';
+        videoDevices.forEach((device, index) => {
+          const opt = document.createElement('option');
+          opt.value = device.deviceId;
+          opt.textContent = device.label || `Camera ${index + 1}`;
+          if (device.deviceId === selectedCameraDeviceId) opt.selected = true;
+          select.appendChild(opt);
+        });
+        if (videoDevices.length === 0) {
+          select.innerHTML = '<option value="">Default Camera</option>';
+        }
+      } catch (err) {
+        console.warn('Could not list cameras:', err);
+      }
+    }
+
+    async function startWebcamScanner() {
+      if (isWebcamScanning && webcamStream) return;
+      const errorMsg = document.getElementById('webcamErrorMsg');
+      if (errorMsg) errorMsg.style.display = 'none';
+
+      showWebcamStatus('INITIALIZING...', 'offline');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (errorMsg) {
+          errorMsg.textContent = 'Camera API (getUserMedia) is not supported in this browser.';
+          errorMsg.style.display = 'block';
+        }
+        showWebcamStatus('UNSUPPORTED', 'offline');
+        return;
+      }
+
+      const constraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          deviceId: selectedCameraDeviceId ? { exact: selectedCameraDeviceId } : undefined
+        },
+        audio: false
+      };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        webcamStream = stream;
+        const video = document.getElementById('webcamVideo');
+        video.srcObject = stream;
+        await video.play();
+
+        // Reveal active video HUD, hide permission prompt
+        document.getElementById('webcamPromptOverlay').style.display = 'none';
+        document.getElementById('webcamHudTop').style.display = 'flex';
+        document.getElementById('webcamScanLine').style.display = 'block';
+
+        // Update resolution text
+        video.addEventListener('loadedmetadata', () => {
+          const resText = document.getElementById('webcamResText');
+          if (resText) resText.textContent = `${video.videoWidth}x${video.videoHeight}`;
+        }, { once: true });
+
+        // Update camera list now that permission is granted
+        await updateCameraDevicesList();
+
+        isWebcamScanning = true;
+        updateWebcamControlsUI(true);
+        showWebcamStatus('LIVE SCANNING', 'active');
+
+        // Start real-time recognition loop
+        startRecognitionLoop();
+      } catch (err) {
+        console.error('Webcam access failed:', err);
+        showWebcamStatus('PERMISSION DENIED', 'offline');
+        const overlay = document.getElementById('webcamPromptOverlay');
+        if (overlay) overlay.style.display = 'flex';
+        if (errorMsg) {
+          errorMsg.textContent = err.name === 'NotAllowedError'
+            ? 'Camera access permission was denied. Please allow camera permissions in your browser bar.'
+            : `Could not access camera: ${err.message}`;
+          errorMsg.style.display = 'block';
+        }
+        updateWebcamControlsUI(false);
+      }
+    }
+
+    function stopWebcamScanner() {
+      stopRecognitionLoop();
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+      }
+      const video = document.getElementById('webcamVideo');
+      if (video) video.srcObject = null;
+
+      // Clear canvas overlay
+      const canvas = document.getElementById('webcamOverlayCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      document.getElementById('webcamPromptOverlay').style.display = 'flex';
+      document.getElementById('webcamHudTop').style.display = 'none';
+      document.getElementById('webcamScanLine').style.display = 'none';
+
+      isWebcamScanning = false;
+      updateWebcamControlsUI(false);
+      showWebcamStatus('OFFLINE', 'offline');
+    }
+
+    function pauseWebcamRecognition() {
+      stopRecognitionLoop();
+      if (isWebcamScanning) {
+        showWebcamStatus('PAUSED', 'offline');
+      }
+    }
+
+    function toggleWebcam() {
+      if (isWebcamScanning) {
+        stopWebcamScanner();
+      } else {
+        startWebcamScanner();
+      }
+    }
+
+    function updateWebcamControlsUI(active) {
+      const toggleIcon = document.getElementById('webcamToggleIcon');
+      const toggleLabel = document.getElementById('webcamToggleLabel');
+      const snapBtn = document.getElementById('webcamSnapBtn');
+      if (toggleIcon) toggleIcon.textContent = active ? '⏹' : '▶';
+      if (toggleLabel) toggleLabel.textContent = active ? 'Stop Camera' : 'Start Camera';
+      if (snapBtn) snapBtn.disabled = !active;
+    }
+
+    function startRecognitionLoop() {
+      if (webcamScanTimer) clearInterval(webcamScanTimer);
+      webcamScanTimer = setInterval(captureAndRecognizeFrame, 350);
+    }
+
+    function stopRecognitionLoop() {
+      if (webcamScanTimer) {
+        clearInterval(webcamScanTimer);
+        webcamScanTimer = null;
+      }
+    }
+
+    async function captureAndRecognizeFrame() {
+      if (!isWebcamScanning || isFrameProcessing) return;
+      const video = document.getElementById('webcamVideo');
+      if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+
+      isFrameProcessing = true;
+      const t0 = performance.now();
+
+      try {
+        if (!offscreenCanvas) {
+          offscreenCanvas = document.createElement('canvas');
+        }
+        const targetW = Math.min(video.videoWidth, 640);
+        const targetH = Math.round(targetW * (video.videoHeight / video.videoWidth));
+        offscreenCanvas.width = targetW;
+        offscreenCanvas.height = targetH;
+        const offCtx = offscreenCanvas.getContext('2d');
+        offCtx.drawImage(video, 0, 0, targetW, targetH);
+
+        const blob = await new Promise(resolve => offscreenCanvas.toBlob(resolve, 'image/jpeg', 0.85));
+        if (!blob) {
+          isFrameProcessing = false;
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', blob, 'webcam_frame.jpg');
+
+        const res = await fetch('/faces/recognize_frame?persist=true', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const latency = Math.round(performance.now() - t0);
+        const latBadge = document.getElementById('scanLatencyBadge');
+        if (latBadge) latBadge.textContent = `${latency}ms`;
+
+        if (res.ok) {
+          const data = await res.json();
+          renderFaceOverlay(data.faces, targetW, targetH);
+          updateTelemetryHUD(data.faces);
+        }
+      } catch (err) {
+        console.warn('Frame recognition error:', err);
+      } finally {
+        isFrameProcessing = false;
+      }
+    }
+
+    function renderFaceOverlay(faces, frameW, frameH) {
+      const canvas = document.getElementById('webcamOverlayCanvas');
+      const video = document.getElementById('webcamVideo');
+      if (!canvas || !video) return;
+
+      const rect = video.getBoundingClientRect();
+      if (canvas.width !== rect.width || canvas.height !== rect.height) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!faces || faces.length === 0) return;
+
+      const scaleX = canvas.width / frameW;
+      const scaleY = canvas.height / frameH;
+      const isMirrored = isWebcamMirrored;
+
+      faces.forEach(face => {
+        let [x1, y1, x2, y2] = face.bbox;
+        let bx1 = x1 * scaleX;
+        let by1 = y1 * scaleY;
+        let bx2 = x2 * scaleX;
+        let by2 = y2 * scaleY;
+        let bw = bx2 - bx1;
+        let bh = by2 - by1;
+
+        if (isMirrored) {
+          bx1 = canvas.width - bx2;
+        }
+
+        const isKnown = face.status === 'KNOWN';
+        const primaryColor = isKnown ? '#00ff88' : '#f59e0b';
+        const glowColor = isKnown ? 'rgba(0, 255, 136, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+        const nameText = isKnown ? face.name : 'UNKNOWN';
+        const matchPct = Math.round((face.similarity || 0) * 100);
+
+        // Bounding Box
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 8;
+        ctx.strokeRect(bx1, by1, bw, bh);
+
+        // High-tech corner brackets
+        const corner = Math.min(16, bw / 3, bh / 3);
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        // Top-left
+        ctx.moveTo(bx1, by1 + corner); ctx.lineTo(bx1, by1); ctx.lineTo(bx1 + corner, by1);
+        // Top-right
+        ctx.moveTo(bx1 + bw - corner, by1); ctx.lineTo(bx1 + bw, by1); ctx.lineTo(bx1 + bw, by1 + corner);
+        // Bottom-right
+        ctx.moveTo(bx1 + bw, by1 + bh - corner); ctx.lineTo(bx1 + bw, by1 + bh); ctx.lineTo(bx1 + bw - corner, by1 + bh);
+        // Bottom-left
+        ctx.moveTo(bx1 + corner, by1 + bh); ctx.lineTo(bx1, by1 + bh); ctx.lineTo(bx1, by1 + bh - corner);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // HUD Identity Tag
+        const tagText = `${isKnown ? '● KNOWN' : '▲ UNKNOWN'}: ${nameText} (${matchPct}%)`;
+        ctx.font = 'bold 12px "JetBrains Mono", Consolas, monospace';
+        const textMetrics = ctx.measureText(tagText);
+        const tagWidth = textMetrics.width + 16;
+        const tagHeight = 22;
+        const tagY = Math.max(2, by1 - tagHeight - 4);
+
+        ctx.fillStyle = isKnown ? 'rgba(0, 30, 15, 0.88)' : 'rgba(35, 20, 0, 0.88)';
+        ctx.fillRect(bx1, tagY, tagWidth, tagHeight);
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx1, tagY, tagWidth, tagHeight);
+
+        ctx.fillStyle = primaryColor;
+        ctx.fillText(tagText, bx1 + 8, tagY + 15);
+      });
+    }
+
+    function updateTelemetryHUD(faces) {
+      const hudBadge = document.getElementById('webcamTargetHUD');
+      const faceCountElem = document.getElementById('telemetryFaceCount');
+      const count = faces ? faces.length : 0;
+      if (faceCountElem) faceCountElem.textContent = count;
+
+      if (!hudBadge) return;
+      if (count === 0) {
+        hudBadge.className = 'hud-target-badge searching';
+        hudBadge.innerHTML = '<span class="hud-pulse-dot"></span> SEARCHING TARGETS...';
+      } else {
+        const knownFace = faces.find(f => f.status === 'KNOWN');
+        if (knownFace) {
+          hudBadge.className = 'hud-target-badge known';
+          hudBadge.innerHTML = `✓ MATCH: ${escapeHtml(knownFace.name).toUpperCase()} (${Math.round(knownFace.similarity * 100)}%)`;
+        } else {
+          hudBadge.className = 'hud-target-badge unknown';
+          hudBadge.innerHTML = `⚠ UNKNOWN PERSON (${count} in view)`;
+        }
+      }
+    }
+
+    function handleQuickSnapToEnroll() {
+      const video = document.getElementById('webcamVideo');
+      if (!video || video.readyState < 2) {
+        alert('Webcam is not active yet.');
+        return;
+      }
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = video.videoWidth;
+      snapCanvas.height = video.videoHeight;
+      const ctx = snapCanvas.getContext('2d');
+      if (isWebcamMirrored) {
+        ctx.translate(snapCanvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0);
+
+      snapCanvas.toBlob(blob => {
+        const file = new File([blob], "webcam_snapshot.jpg", { type: "image/jpeg" });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('enrollFileInput').files = dt.files;
+        document.getElementById('previewImg').src = snapCanvas.toDataURL('image/jpeg');
+        document.getElementById('dropZonePrompt').style.display = 'none';
+        document.getElementById('dropZonePreview').style.display = 'block';
+
+        const nameInput = document.getElementById('enrollName');
+        nameInput.focus();
+        nameInput.placeholder = "Enter person name for this snapshot...";
+      }, 'image/jpeg', 0.95);
     }
 
     // Initialize on page load
