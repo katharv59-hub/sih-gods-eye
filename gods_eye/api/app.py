@@ -353,6 +353,44 @@ def create_app(
             raise HTTPException(status_code=404, detail="Alert not found")
         return JSONResponse(content=alert.to_dict())
 
+    @app.post("/alerts/{alert_id}/resolve")
+    async def resolve_alert_endpoint(
+        alert_id: str,
+        resolution_note: Optional[str] = Query("Resolved by Tactical Operator"),
+        authorization: Optional[str] = Header(None),
+    ) -> JSONResponse:
+        """Mark an active alert as resolved."""
+        _auth(authorization)
+        if alert_store is None:
+            raise HTTPException(status_code=503, detail="Alert store not available")
+        import time
+        from gods_eye.schemas.alert import AlertStatus
+        alert_store.update_status(
+            alert_id=alert_id,
+            status=AlertStatus.RESOLVED,
+            resolved_ns=time.time_ns(),
+            resolution_note=resolution_note,
+        )
+        return JSONResponse(content={"status": "resolved", "alert_id": alert_id})
+
+    @app.post("/alerts/{alert_id}/dispatch")
+    async def dispatch_alert_endpoint(
+        alert_id: str,
+        unit: Optional[str] = Query("PATROL_ALPHA"),
+        authorization: Optional[str] = Header(None),
+    ) -> JSONResponse:
+        """Dispatch tactical patrol unit to alert location."""
+        _auth(authorization)
+        if alert_store is None:
+            raise HTTPException(status_code=503, detail="Alert store not available")
+        from gods_eye.schemas.alert import AlertStatus
+        alert_store.update_status(
+            alert_id=alert_id,
+            status=AlertStatus.ACTIVE,
+            resolution_note=f"Patrol Dispatched: {unit}",
+        )
+        return JSONResponse(content={"status": "dispatched", "alert_id": alert_id, "unit": unit})
+
     @app.get("/subjects/{subject_id}")
     async def get_subject(
         subject_id: str,
